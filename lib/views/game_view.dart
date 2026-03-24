@@ -2,8 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
 import '../controllers/game_controller.dart';
+import '../controllers/theme_controller.dart';
 import '../models/question_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/numeric_keypad.dart';
@@ -13,349 +13,378 @@ class GameView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final game = Get.find<GameController>();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primary = Theme.of(context).colorScheme.primary;
-    final error = Theme.of(context).colorScheme.error;
+    final game      = Get.find<GameController>();
+    final themeCtrl = Get.find<ThemeController>();
 
-    return Scaffold(
-      body: SafeArea(
-        child: Obx(() {
-          // Full-screen flash overlay
-          Color? flashColor;
-          if (game.isCorrect.value) {
-            flashColor = (isDark ? AppColors.neonGreen : AppColors.accentGreen)
-                .withOpacity(0.12);
-          } else if (game.isWrong.value) {
-            flashColor = error.withOpacity(0.12);
-          }
+    return Obx(() {
+      final isDark = themeCtrl.isDarkMode;
 
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            color: flashColor ?? Colors.transparent,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Column(
-                children: [
-                  // ── Header ───────────────────────────────────────────
-                  _Header(game: game, isDark: isDark, primary: primary),
-
-                  const SizedBox(height: 8),
-
-                  // ── VS Machine progress bar ───────────────────────────
-                  if (game.gameMode.value == GameMode.vsMachine)
-                    _VsBar(game: game, isDark: isDark),
-
-                  const SizedBox(height: 16),
-
-                  // ── Score & multiplier ────────────────────────────────
-                  _ScoreRow(game: game, isDark: isDark, primary: primary),
-
-                  const Spacer(),
-
-                  // ── Equation display ──────────────────────────────────
-                  _EquationDisplay(
-                    game: game,
-                    isDark: isDark,
-                    primary: primary,
-                    error: error,
-                  ),
-
-                  const Spacer(),
-
-                  // ── Input display ─────────────────────────────────────
-                  _InputDisplay(
-                    game: game,
-                    isDark: isDark,
-                    primary: primary,
-                    error: error,
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // ── Keypad ────────────────────────────────────────────
-                  NumericKeypad(onKey: game.onKeyTap),
-                  const SizedBox(height: 16),
-                ],
-              ),
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+        body: Stack(
+          children: [
+            // ── Main game content ──────────────────────────────────────
+            SafeArea(
+              child: _GameBody(game: game, isDark: isDark),
             ),
-          );
-        }),
+            // ── Flash overlay ──────────────────────────────────────────
+            Obx(() {
+              if (game.isCorrect.value) {
+                return Positioned.fill(
+                  child: IgnorePointer(
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 200),
+                      opacity: game.isCorrect.value ? 1 : 0,
+                      child: Container(
+                        color: AppColors.correct.withOpacity(0.08),
+                      ),
+                    ),
+                  ),
+                );
+              }
+              if (game.isWrong.value) {
+                return Positioned.fill(
+                  child: IgnorePointer(
+                    child: Container(color: AppColors.wrong.withOpacity(0.08)),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            }),
+            // ── Mascot toast ───────────────────────────────────────────
+            Obx(() => _MascotToast(msg: game.mascotMessage.value, isDark: isDark)),
+            // ── Success overlay ────────────────────────────────────────
+            Obx(() {
+              if (!game.showSuccessOverlay.value) return const SizedBox.shrink();
+              return _SuccessOverlay(game: game, isDark: isDark);
+            }),
+          ],
+        ),
+      );
+    });
+  }
+}
+
+// ── Main game body ────────────────────────────────────────────────────────────
+
+class _GameBody extends StatelessWidget {
+  final GameController game;
+  final bool isDark;
+
+  const _GameBody({required this.game, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.expand(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Column(
+          children: [
+            // ── Header: close + timer + mode ──────────────────────────
+            _Header(game: game, isDark: isDark),
+            const SizedBox(height: 12),
+            // ── Progress bar ──────────────────────────────────────────
+            _ProgressBar(game: game, isDark: isDark),
+            const SizedBox(height: 10),
+            // ── Hearts ────────────────────────────────────────────────
+            _HeartsRow(game: game),
+            const SizedBox(height: 8),
+            // ── VS bar (when applicable) ──────────────────────────────
+            Obx(() {
+              if (game.gameMode.value != GameMode.vsMachine) return const SizedBox.shrink();
+              return _VsBar(game: game, isDark: isDark);
+            }),
+            const Spacer(),
+            // ── Equation card ─────────────────────────────────────────
+            _EquationCard(game: game, isDark: isDark),
+            const Spacer(),
+            // ── Answer input display ──────────────────────────────────
+            _AnswerDisplay(game: game, isDark: isDark),
+            const SizedBox(height: 16),
+            // ── Keypad ────────────────────────────────────────────────
+            NumericKeypad(onKey: game.onKeyTap),
+            const SizedBox(height: 12),
+          ],
+        ),
       ),
     );
   }
 }
 
-// ── Sub-widgets ───────────────────────────────────────────────────────────────
+// ── Header ────────────────────────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {
   final GameController game;
   final bool isDark;
-  final Color primary;
-
-  const _Header({
-    required this.game,
-    required this.isDark,
-    required this.primary,
-  });
+  const _Header({required this.game, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
+        // Close button
         GestureDetector(
-          onTap: () {
-            game.stopGame();
-            Get.back();
-          },
+          onTap: () { game.stopGame(); Get.back(); },
           child: Container(
-            width: 40,
-            height: 40,
+            width: 40, height: 40,
             decoration: BoxDecoration(
               color: isDark ? AppColors.darkCard : AppColors.lightCard,
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
             ),
-            child: Icon(
-              Icons.close_rounded,
-              color: isDark ? Colors.white54 : Colors.black54,
-              size: 20,
-            ),
+            child: Icon(Icons.close_rounded,
+                color: isDark ? Colors.white54 : Colors.black45, size: 20),
           ),
         ),
+        const Spacer(),
         // Timer
         Obx(() {
           final pct = game.timeLeft.value / GameController.gameDuration;
-          final timerColor = pct > 0.4
-              ? primary
-              : pct > 0.2
-              ? (isDark ? AppColors.neonYellow : Colors.orange)
-              : (isDark ? AppColors.neonPink : AppColors.accentRed);
-
-          return Row(
-            children: [
-              Icon(Icons.timer_rounded, color: timerColor, size: 18),
-              const SizedBox(width: 6),
-              AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 300),
-                style: TextStyle(
-                  color: timerColor,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -1,
-                ),
-                child: Text('${game.timeLeft.value}'),
-              ),
-              Text(
-                's',
-                style: TextStyle(
-                  color: timerColor.withOpacity(0.6),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+          final col = pct > 0.4 ? (isDark ? AppColors.neonGreen : AppColors.duoGreen)
+              : pct > 0.2 ? AppColors.neonOrange
+              :             AppColors.heartRed;
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: col.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: col.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.timer_rounded, color: col, size: 16),
+                const SizedBox(width: 6),
+                Text('${game.timeLeft.value}s',
+                    style: TextStyle(color: col, fontSize: 16,
+                        fontWeight: FontWeight.w800)),
+              ],
+            ),
           );
         }),
-        // Mode badge
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        const Spacer(),
+        // Score badge
+        Obx(() => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             color: isDark ? AppColors.darkCard : AppColors.lightCard,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
           ),
-          child: Obx(
-            () => Text(
-              game.gameMode.value == GameMode.singlePlayer ? 'SOLO' : 'VS AI',
-              style: TextStyle(
-                color: primary,
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1.5,
-              ),
-            ),
+          child: Row(
+            children: [
+              Text('⭐', style: const TextStyle(fontSize: 14)),
+              const SizedBox(width: 4),
+              Text('${game.score.value}',
+                  style: TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white : Colors.black,
+                  )),
+            ],
           ),
-        ),
+        )),
       ],
     );
   }
 }
 
-class _VsBar extends StatelessWidget {
+// ── Progress bar ──────────────────────────────────────────────────────────────
+
+class _ProgressBar extends StatelessWidget {
   final GameController game;
   final bool isDark;
-
-  const _VsBar({required this.game, required this.isDark});
+  const _ProgressBar({required this.game, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
+    final green = isDark ? AppColors.neonGreen : AppColors.duoGreen;
+
     return Obx(() {
-      final total = game.score.value + game.machineScore.value;
-      final playerPct = total == 0 ? 0.5 : game.score.value / total;
+      final pct     = game.progressPct.value;
+      final bounce  = game.progressBounce.value;
 
       return Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'YOU  ${game.score.value}',
-                style: TextStyle(
-                  color: isDark ? AppColors.neonGreen : AppColors.accentGreen,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              Text(
-                '${game.machineScore.value}  AI',
-                style: TextStyle(
-                  color: isDark ? AppColors.neonBlue : AppColors.accentBlue,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
+              Text('Progress',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white38 : Colors.black38,
+                      letterSpacing: 1)),
+              Text('${(pct * 100).toInt()}%',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: green)),
             ],
           ),
           const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final totalWidth = constraints.maxWidth;
-                final playerWidth = (playerPct.clamp(0.0, 1.0) * totalWidth);
-                return SizedBox(
-                  height: 8,
-                  child: Stack(
-                    children: [
-                      // Machine bar (full width background)
-                      Container(
-                        width: totalWidth,
-                        color: isDark
-                            ? AppColors.neonBlue
-                            : AppColors.accentBlue,
-                      ),
-                      // Player bar (animated overlay)
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 400),
-                        curve: Curves.easeOut,
-                        width: playerWidth,
-                        color: isDark
-                            ? AppColors.neonGreen
-                            : AppColors.accentGreen,
+          LayoutBuilder(builder: (ctx, box) {
+            final w = box.maxWidth;
+            return Stack(
+              children: [
+                // Track
+                Container(
+                  height: 14,
+                  width: w,
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.darkCard : AppColors.lightCard,
+                    borderRadius: BorderRadius.circular(7),
+                    border: Border.all(
+                        color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                  ),
+                ),
+                // Fill
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.easeOutBack,
+                  height: 14,
+                  width: (w * pct).clamp(0, w),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: [green, green.withOpacity(0.75)]),
+                    borderRadius: BorderRadius.circular(7),
+                    // Always keep one shadow entry so Flutter can lerp without
+                    // producing a negative blur radius during the transition.
+                    boxShadow: [
+                      BoxShadow(
+                        color: green.withOpacity(bounce ? 0.6 : 0.0),
+                        blurRadius: bounce ? 8 : 0,
+                        spreadRadius: bounce ? 1 : 0,
                       ),
                     ],
                   ),
-                );
-              },
-            ),
-          ),
+                ),
+                // Bounce gleam
+                if (bounce)
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 300),
+                    left: (w * pct).clamp(0, w) - 20,
+                    top: 2,
+                    child: Container(
+                      width: 14, height: 10,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          }),
         ],
       );
     });
   }
 }
 
-class _ScoreRow extends StatelessWidget {
-  final GameController game;
-  final bool isDark;
-  final Color primary;
+// ── Hearts row ────────────────────────────────────────────────────────────────
 
-  const _ScoreRow({
-    required this.game,
-    required this.isDark,
-    required this.primary,
-  });
+class _HeartsRow extends StatelessWidget {
+  final GameController game;
+  const _HeartsRow({required this.game});
 
   @override
   Widget build(BuildContext context) {
-    return Obx(
-      () => Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            '${game.score.value}',
-            style: TextStyle(
-              fontSize: 52,
-              fontWeight: FontWeight.w900,
-              color: isDark ? Colors.white : Colors.black,
-              letterSpacing: -2,
-              height: 1,
-            ),
+    return Obx(() => Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(GameController.maxHearts, (i) {
+        final filled = i < game.hearts.value;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          child: Icon(
+            filled ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+            color: filled ? AppColors.heartRed : Colors.grey.withOpacity(0.4),
+            size: 28,
           ),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: primary.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: primary.withOpacity(0.3)),
-                ),
-                child: Text(
-                  '×${game.multiplier.value.toStringAsFixed(1)}',
-                  style: TextStyle(
-                    color: primary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'pts',
-                style: TextStyle(
-                  color: isDark ? Colors.white38 : Colors.black38,
-                  fontSize: 13,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+        );
+      }),
+    ));
   }
 }
 
-class _EquationDisplay extends StatelessWidget {
+// ── VS bar ────────────────────────────────────────────────────────────────────
+
+class _VsBar extends StatelessWidget {
   final GameController game;
   final bool isDark;
-  final Color primary;
-  final Color error;
-
-  const _EquationDisplay({
-    required this.game,
-    required this.isDark,
-    required this.primary,
-    required this.error,
-  });
+  const _VsBar({required this.game, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      Color borderColor = primary.withOpacity(0.2);
+      final total      = game.score.value + game.machineScore.value;
+      final playerPct  = total == 0 ? 0.5 : (game.score.value / total).clamp(0.0, 1.0);
+
+      return Padding(
+        padding: const EdgeInsets.only(top: 8, bottom: 4),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('YOU  ${game.score.value}',
+                    style: const TextStyle(color: AppColors.duoGreen,
+                        fontSize: 11, fontWeight: FontWeight.w800)),
+                Text('${game.machineScore.value}  AI',
+                    style: const TextStyle(color: AppColors.skyBlue,
+                        fontSize: 11, fontWeight: FontWeight.w800)),
+              ],
+            ),
+            const SizedBox(height: 4),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(5),
+              child: LayoutBuilder(builder: (ctx, box) {
+                final w = box.maxWidth;
+                return SizedBox(
+                  height: 8,
+                  child: Stack(children: [
+                    Container(width: w, color: AppColors.skyBlue),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeOut,
+                      width: w * playerPct,
+                      color: isDark ? AppColors.neonGreen : AppColors.duoGreen,
+                    ),
+                  ]),
+                );
+              }),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+}
+
+// ── Equation card ─────────────────────────────────────────────────────────────
+
+class _EquationCard extends StatelessWidget {
+  final GameController game;
+  final bool isDark;
+  const _EquationCard({required this.game, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      Color borderColor;
       if (game.isCorrect.value) {
-        borderColor = isDark ? AppColors.neonGreen : AppColors.accentGreen;
+        borderColor = AppColors.correct;
       } else if (game.isWrong.value) {
-        borderColor = error;
+        borderColor = AppColors.wrong;
+      } else {
+        borderColor = isDark ? AppColors.darkBorder : AppColors.lightBorder;
       }
 
       return AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+        padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.darkCard : AppColors.lightCard,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: borderColor, width: 2),
+          color: isDark ? AppColors.darkCard : Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: borderColor, width: 2.5),
           boxShadow: [
             BoxShadow(
-              color: borderColor.withOpacity(0.3),
-              blurRadius: 20,
-              spreadRadius: 2,
-            ),
+                color: borderColor.withOpacity(0.25),
+                blurRadius: 16, offset: const Offset(0, 6)),
           ],
         ),
         child: Column(
@@ -364,30 +393,29 @@ class _EquationDisplay extends StatelessWidget {
               Text(
                 game.currentQuestion.value!.displayString,
                 style: TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.w800,
+                  fontSize: 44, fontWeight: FontWeight.w900,
                   color: isDark ? Colors.white : Colors.black,
                   letterSpacing: -1,
                 ),
                 textAlign: TextAlign.center,
               ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
+            // Streak + correct counter
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _statChip(
-                  icon: Icons.check_rounded,
-                  value: '${game.correctAnswers.value}',
-                  color: isDark ? AppColors.neonGreen : AppColors.accentGreen,
-                  isDark: isDark,
+                _Chip(
+                  icon: Icons.check_circle_rounded,
+                  label: '${game.correctAnswers.value} correct',
+                  color: AppColors.correct,
                 ),
                 const SizedBox(width: 8),
-                _statChip(
-                  icon: Icons.question_mark_rounded,
-                  value: '${game.totalAttempts.value}',
-                  color: isDark ? Colors.white38 : Colors.black38,
-                  isDark: isDark,
-                ),
+                if (game.consecutiveCorrect.value >= 2)
+                  _Chip(
+                    icon: Icons.local_fire_department_rounded,
+                    label: '${game.consecutiveCorrect.value} streak',
+                    color: AppColors.neonOrange,
+                  ),
               ],
             ),
           ],
@@ -395,87 +423,322 @@ class _EquationDisplay extends StatelessWidget {
       );
     });
   }
+}
 
-  Widget _statChip({
-    required IconData icon,
-    required String value,
-    required Color color,
-    required bool isDark,
-  }) {
+class _Chip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  const _Chip({required this.icon, required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 13),
+          Icon(icon, color: color, size: 14),
           const SizedBox(width: 4),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+          Text(label, style: TextStyle(
+              color: color, fontSize: 12, fontWeight: FontWeight.w700)),
         ],
       ),
     );
   }
 }
 
-class _InputDisplay extends StatelessWidget {
+// ── Answer display ────────────────────────────────────────────────────────────
+
+class _AnswerDisplay extends StatelessWidget {
   final GameController game;
   final bool isDark;
-  final Color primary;
-  final Color error;
-
-  const _InputDisplay({
-    required this.game,
-    required this.isDark,
-    required this.primary,
-    required this.error,
-  });
+  const _AnswerDisplay({required this.game, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      Color accentColor = primary;
-      if (game.isCorrect.value) {
-        accentColor = isDark ? AppColors.neonGreen : AppColors.accentGreen;
-      } else if (game.isWrong.value) {
-        accentColor = error;
-      }
-
-      final displayText = game.currentInput.value.isEmpty
-          ? '—'
-          : game.currentInput.value;
+      Color accent;
+      if (game.isCorrect.value) accent = AppColors.correct;
+      else if (game.isWrong.value) accent = AppColors.wrong;
+      else accent = isDark ? AppColors.neonBlue : AppColors.skyBlue;
 
       return AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+        padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: accentColor.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: accentColor.withOpacity(0.3)),
+          color: accent.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: accent.withOpacity(0.35), width: 2),
         ),
         child: Center(
           child: Text(
-            displayText,
+            game.currentInput.value.isEmpty ? '—' : game.currentInput.value,
             style: TextStyle(
-              fontSize: 34,
-              fontWeight: FontWeight.w900,
+              fontSize: 36, fontWeight: FontWeight.w900, letterSpacing: -1,
               color: game.currentInput.value.isEmpty
                   ? (isDark ? Colors.white24 : Colors.black26)
                   : (isDark ? Colors.white : Colors.black),
-              letterSpacing: -1,
             ),
           ),
         ),
       );
     });
+  }
+}
+
+// ── Mascot toast ──────────────────────────────────────────────────────────────
+
+class _MascotToast extends StatelessWidget {
+  final String msg;
+  final bool isDark;
+  const _MascotToast({required this.msg, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    if (msg.isEmpty) return const SizedBox.shrink();
+
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 80,
+      left: 24, right: 24,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 300),
+        opacity: msg.isNotEmpty ? 1.0 : 0.0,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkCard : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+                color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.15),
+                  blurRadius: 16, offset: const Offset(0, 6)),
+            ],
+          ),
+          child: Row(
+            children: [
+              // Placeholder mascot circle
+              Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(
+                  color: (isDark ? AppColors.neonGreen : AppColors.duoGreen).withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(child: Text('🦉', style: TextStyle(fontSize: 22))),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(msg,
+                    style: TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : Colors.black87,
+                    )),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Success overlay ───────────────────────────────────────────────────────────
+
+class _SuccessOverlay extends StatelessWidget {
+  final GameController game;
+  final bool isDark;
+  const _SuccessOverlay({required this.game, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final result = game.gameResult.value;
+    final green  = isDark ? AppColors.neonGreen : AppColors.duoGreen;
+
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black.withOpacity(0.7),
+        child: Center(
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 32),
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSurface : Colors.white,
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(color: green.withOpacity(0.4), width: 2),
+              boxShadow: [
+                BoxShadow(color: green.withOpacity(0.3),
+                    blurRadius: 40, spreadRadius: 4),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Animated star placeholder (Lottie-style)
+                _StarBurst(color: green),
+                const SizedBox(height: 16),
+                Text('Level Complete!', style: TextStyle(
+                  fontSize: 28, fontWeight: FontWeight.w900,
+                  color: isDark ? Colors.white : Colors.black,
+                )),
+                const SizedBox(height: 8),
+                Text('Incredible work! 🎉', style: TextStyle(
+                    fontSize: 15, color: isDark ? Colors.white54 : Colors.black45)),
+                const SizedBox(height: 24),
+                // Stats row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _OverlayStat(
+                        label: 'Score', value: '${result?.score ?? 0}',
+                        color: AppColors.goldStar),
+                    _OverlayStat(
+                        label: 'Accuracy',
+                        value: '${result?.accuracy.toStringAsFixed(0) ?? 0}%',
+                        color: green),
+                    _OverlayStat(
+                        label: 'Correct',
+                        value: '${result?.correctAnswers ?? 0}',
+                        color: AppColors.skyBlue),
+                  ],
+                ),
+                const SizedBox(height: 28),
+                SizedBox(
+                  width: double.infinity,
+                  child: _ChunkyOverlayButton(
+                    label: 'Continue',
+                    color: green,
+                    shadowColor: isDark ? AppColors.duoGreenDark : AppColors.duoGreenDark,
+                    onTap: game.dismissSuccessOverlay,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StarBurst extends StatefulWidget {
+  final Color color;
+  const _StarBurst({required this.color});
+
+  @override
+  State<_StarBurst> createState() => _StarBurstState();
+}
+
+class _StarBurstState extends State<_StarBurst>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scale;
+  late Animation<double> _rotate;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))
+      ..repeat(reverse: true);
+    _scale  = Tween<double>(begin: 0.9, end: 1.1).animate(
+        CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    _rotate = Tween<double>(begin: -0.05, end: 0.05).animate(
+        CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, __) => Transform.rotate(
+        angle: _rotate.value,
+        child: Transform.scale(
+          scale: _scale.value,
+          child: Container(
+            width: 96, height: 96,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: widget.color.withOpacity(0.15),
+              border: Border.all(color: widget.color.withOpacity(0.4), width: 3),
+              boxShadow: [
+                BoxShadow(color: widget.color.withOpacity(0.4), blurRadius: 24, spreadRadius: 4),
+              ],
+            ),
+            child: const Center(child: Text('⭐', style: TextStyle(fontSize: 52))),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OverlayStat extends StatelessWidget {
+  final String label, value;
+  final Color color;
+  const _OverlayStat({required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(value, style: TextStyle(
+            fontSize: 24, fontWeight: FontWeight.w900, color: color)),
+        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+      ],
+    );
+  }
+}
+
+class _ChunkyOverlayButton extends StatefulWidget {
+  final String label;
+  final Color color, shadowColor;
+  final VoidCallback onTap;
+  const _ChunkyOverlayButton({required this.label, required this.color,
+    required this.shadowColor, required this.onTap});
+
+  @override
+  State<_ChunkyOverlayButton> createState() => _ChunkyOverlayButtonState();
+}
+
+class _ChunkyOverlayButtonState extends State<_ChunkyOverlayButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    const sh = 4.0;
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) { setState(() => _pressed = false); widget.onTap(); },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 80),
+        height: 56 + (_pressed ? 0 : sh),
+        margin: EdgeInsets.only(bottom: _pressed ? sh : 0),
+        decoration: BoxDecoration(
+          color: widget.shadowColor,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 80),
+          height: 56,
+          margin: EdgeInsets.only(bottom: _pressed ? 0 : sh),
+          decoration: BoxDecoration(
+            color: widget.color,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Center(
+            child: Text(widget.label, style: const TextStyle(
+                color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+          ),
+        ),
+      ),
+    );
   }
 }

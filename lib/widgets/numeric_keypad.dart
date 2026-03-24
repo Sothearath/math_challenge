@@ -1,7 +1,6 @@
 // lib/widgets/numeric_keypad.dart
 
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import '../theme/app_theme.dart';
 
 class NumericKeypad extends StatelessWidget {
@@ -10,16 +9,15 @@ class NumericKeypad extends StatelessWidget {
   const NumericKeypad({super.key, required this.onKey});
 
   static const List<String> _keys = [
-    '7', '8', '9',
-    '4', '5', '6',
-    '1', '2', '3',
-    '⌫', '0', '✓',
+    '7','8','9',
+    '4','5','6',
+    '1','2','3',
+    '⌫','0','✓',
   ];
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primary = Theme.of(context).colorScheme.primary;
 
     return GridView.builder(
       shrinkWrap: true,
@@ -28,36 +26,30 @@ class NumericKeypad extends StatelessWidget {
         crossAxisCount: 3,
         mainAxisSpacing: 10,
         crossAxisSpacing: 10,
-        childAspectRatio: 1.6,
+        childAspectRatio: 1.7,
       ),
       itemCount: _keys.length,
-      itemBuilder: (context, index) {
-        final key = _keys[index];
-        final isDelete = key == '⌫';
+      itemBuilder: (context, i) {
+        final key = _keys[i];
+        final isDelete  = key == '⌫';
         final isConfirm = key == '✓';
 
-        Color bgColor;
-        Color fgColor;
-
+        Color bg, fg, shadow;
         if (isConfirm) {
-          bgColor = primary;
-          fgColor = isDark ? AppColors.darkBg : Colors.white;
+          bg     = AppColors.duoGreen;
+          fg     = Colors.white;
+          shadow = AppColors.duoGreenDark;
         } else if (isDelete) {
-          bgColor = isDark
-              ? AppColors.neonPink.withOpacity(0.15)
-              : AppColors.accentRed.withOpacity(0.1);
-          fgColor = isDark ? AppColors.neonPink : AppColors.accentRed;
+          bg     = isDark ? const Color(0xFF3A2A2A) : const Color(0xFFFFE4E4);
+          fg     = AppColors.heartRed;
+          shadow = isDark ? const Color(0xFF2A1A1A) : AppColors.heartRedDark.withOpacity(0.4);
         } else {
-          bgColor = isDark ? AppColors.darkCard : AppColors.lightCard;
-          fgColor = isDark ? Colors.white : Colors.black87;
+          bg     = isDark ? AppColors.darkCard : Colors.white;
+          fg     = isDark ? Colors.white : const Color(0xFF2D2D2D);
+          shadow = isDark ? AppColors.darkBg : AppColors.lightBorder;
         }
 
-        return _KeyButton(
-          label: key,
-          bgColor: bgColor,
-          fgColor: fgColor,
-          onTap: () => onKey(key),
-        );
+        return _KeyButton(label: key, bg: bg, fg: fg, shadow: shadow, onTap: () => onKey(key));
       },
     );
   }
@@ -65,75 +57,44 @@ class NumericKeypad extends StatelessWidget {
 
 class _KeyButton extends StatefulWidget {
   final String label;
-  final Color bgColor;
-  final Color fgColor;
+  final Color bg, fg, shadow;
   final VoidCallback onTap;
 
-  const _KeyButton({
-    required this.label,
-    required this.bgColor,
-    required this.fgColor,
-    required this.onTap,
-  });
+  const _KeyButton({required this.label, required this.bg, required this.fg,
+      required this.shadow, required this.onTap});
 
   @override
   State<_KeyButton> createState() => _KeyButtonState();
 }
 
-class _KeyButtonState extends State<_KeyButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 80),
-    );
-    _scale = Tween<double>(begin: 1.0, end: 0.92).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
+class _KeyButtonState extends State<_KeyButton> {
+  bool _pressed = false;
+  static const _sh = 3.0;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: (_) => _ctrl.forward(),
-      onTapUp: (_) {
-        _ctrl.reverse();
-        widget.onTap();
-      },
-      onTapCancel: () => _ctrl.reverse(),
-      child: ScaleTransition(
-        scale: _scale,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) { setState(() => _pressed = false); widget.onTap(); },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 70),
+        margin: EdgeInsets.only(bottom: _pressed ? _sh : 0),
+        decoration: BoxDecoration(
+          color: widget.shadow,
+          borderRadius: BorderRadius.circular(14),
+        ),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
+          duration: const Duration(milliseconds: 70),
+          margin: EdgeInsets.only(bottom: _pressed ? 0 : _sh),
           decoration: BoxDecoration(
-            color: widget.bgColor,
+            color: widget.bg,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: widget.fgColor.withOpacity(0.15),
-              width: 1,
-            ),
+            border: Border.all(color: widget.shadow, width: 1.5),
           ),
           child: Center(
-            child: Text(
-              widget.label,
-              style: TextStyle(
-                color: widget.fgColor,
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.5,
-              ),
-            ),
+            child: Text(widget.label,
+              style: TextStyle(color: widget.fg, fontSize: 22, fontWeight: FontWeight.w800)),
           ),
         ),
       ),
