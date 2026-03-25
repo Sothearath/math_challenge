@@ -183,6 +183,16 @@ class GameController extends GetxController {
 
   void stopGame() => _endGame(levelCleared: false);
 
+  /// Called when the user taps the close/back button mid-game.
+  /// Cancels timers and returns to the map — does NOT push /result.
+  void quitGame() {
+    _countdownTimer?.cancel();
+    _machineTimer?.cancel();
+    _mascotTimer?.cancel();
+    isGameActive.value = false;
+    Get.offAllNamed('/');
+  }
+
   // ── Private helpers ───────────────────────────────────────────────────────
 
   void _resetState() {

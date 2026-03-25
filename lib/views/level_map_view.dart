@@ -247,15 +247,13 @@ class _LevelSection extends StatelessWidget {
         ),
 
         // ── Stage path ───────────────────────────────────────────────
-        // Obx(() =>
-            _StagePath(
+        Obx(() => _StagePath(
           level: level,
           color: color,
           shadowColor: dark,
           isDark: isDark,
           streak: streak,
-        ),
-          // ),
+        )),
 
         const SizedBox(height: 8),
         Divider(color: isDark ? Colors.white10 : Colors.black12, indent: 20, endIndent: 20),

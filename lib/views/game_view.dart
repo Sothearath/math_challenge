@@ -124,7 +124,7 @@ class _Header extends StatelessWidget {
       children: [
         // Close button
         GestureDetector(
-          onTap: () { game.stopGame(); Get.back(); },
+          onTap: () => game.quitGame(),
           child: Container(
             width: 40, height: 40,
             decoration: BoxDecoration(

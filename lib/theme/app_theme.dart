@@ -59,46 +59,47 @@ class AppColors {
 }
 
 class AppTheme {
-  static TextTheme _text(TextTheme base) => GoogleFonts.nunitoTextTheme().copyWith(
-    displayLarge: GoogleFonts.nunito(
-        fontSize: 48, fontWeight: FontWeight.w900, letterSpacing: -1.5),
-    displayMedium: GoogleFonts.nunito(
-        fontSize: 36, fontWeight: FontWeight.w800, letterSpacing: -1),
-    titleLarge: GoogleFonts.nunito(
-        fontSize: 22, fontWeight: FontWeight.w800),
-    titleMedium: GoogleFonts.nunito(
-        fontSize: 17, fontWeight: FontWeight.w700),
-    bodyLarge: GoogleFonts.nunito(
-        fontSize: 16, fontWeight: FontWeight.w600),
-    bodyMedium: GoogleFonts.nunito(
-        fontSize: 14, fontWeight: FontWeight.w500),
-    labelLarge: GoogleFonts.nunito(
-        fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: 0.5),);
-
+  static TextTheme _text(TextTheme base) =>
+      GoogleFonts.nunitoTextTheme(base).copyWith(
+        displayLarge: GoogleFonts.nunito(
+            fontSize: 48, fontWeight: FontWeight.w900, letterSpacing: -1.5),
+        displayMedium: GoogleFonts.nunito(
+            fontSize: 36, fontWeight: FontWeight.w800, letterSpacing: -1),
+        titleLarge: GoogleFonts.nunito(
+            fontSize: 22, fontWeight: FontWeight.w800),
+        titleMedium: GoogleFonts.nunito(
+            fontSize: 17, fontWeight: FontWeight.w700),
+        bodyLarge: GoogleFonts.nunito(
+            fontSize: 16, fontWeight: FontWeight.w600),
+        bodyMedium: GoogleFonts.nunito(
+            fontSize: 14, fontWeight: FontWeight.w500),
+        labelLarge: GoogleFonts.nunito(
+            fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+      );
 
   static ThemeData get dark => ThemeData(
-    brightness: Brightness.dark,
-    scaffoldBackgroundColor: AppColors.darkBg,
-    colorScheme: const ColorScheme.dark(
-      primary: AppColors.neonGreen,
-      secondary: AppColors.neonBlue,
-      error: AppColors.heartRed,
-      surface: AppColors.darkSurface,
-    ),
-    textTheme: _text(ThemeData.dark().textTheme),
-    cardColor: AppColors.darkCard,
-  );
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: AppColors.darkBg,
+        colorScheme: const ColorScheme.dark(
+          primary: AppColors.neonGreen,
+          secondary: AppColors.neonBlue,
+          error: AppColors.heartRed,
+          surface: AppColors.darkSurface,
+        ),
+        textTheme: _text(ThemeData.dark().textTheme),
+        cardColor: AppColors.darkCard,
+      );
 
   static ThemeData get light => ThemeData(
-    brightness: Brightness.light,
-    scaffoldBackgroundColor: AppColors.lightBg,
-    colorScheme: const ColorScheme.light(
-      primary: AppColors.duoGreen,
-      secondary: AppColors.skyBlue,
-      error: AppColors.heartRed,
-      surface: AppColors.lightSurface,
-    ),
-    textTheme: _text(ThemeData.light().textTheme),
-    cardColor: AppColors.lightSurface,
-  );
+        brightness: Brightness.light,
+        scaffoldBackgroundColor: AppColors.lightBg,
+        colorScheme: const ColorScheme.light(
+          primary: AppColors.duoGreen,
+          secondary: AppColors.skyBlue,
+          error: AppColors.heartRed,
+          surface: AppColors.lightSurface,
+        ),
+        textTheme: _text(ThemeData.light().textTheme),
+        cardColor: AppColors.lightSurface,
+      );
 }

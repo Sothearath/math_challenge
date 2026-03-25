@@ -1,12 +1,18 @@
 // lib/views/home_view.dart
-// Redirects to /map — kept for route compatibility
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'level_map_view.dart';
+import '../controllers/game_map_controller.dart';
+import 'game_map_view.dart';
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
 
   @override
-  Widget build(BuildContext context) => const LevelMapView();
+  Widget build(BuildContext context) {
+    // Ensure GameMapController is available before the view renders
+    if (!Get.isRegistered<GameMapController>()) {
+      Get.put(GameMapController(), permanent: true);
+    }
+    return const GameMapView();
+  }
 }
