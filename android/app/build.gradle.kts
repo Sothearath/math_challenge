@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.math_challenge"
+    namespace = "com.sothearath.flexi_arithmetic"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.math_challenge"
+        applicationId = "com.sothearath.flexi_arithmetic"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

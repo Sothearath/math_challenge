@@ -1,4 +1,4 @@
-package com.example.math_challenge
+package com.sothearath.flexi_arithmetic
 
 import io.flutter.embedding.android.FlutterActivity
 
