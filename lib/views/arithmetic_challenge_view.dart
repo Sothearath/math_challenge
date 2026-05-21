@@ -1,409 +1,596 @@
-// lib/views/arithmetic_challenge_view.dart
+// lib/features/game/views/arithmetic_challenge_view.dart
 //
-// FlexiArithmetic: Brainy Challenge — Active Challenge screen.
-// Spring Green Harmony palette, rounded 24px+ containers.
+// Upgraded Challenge Screen View
+// New additions:
+//   • Smooth TweenAnimationBuilder progress bar
+//   • Floating labels (combo announce + speed bonus) — stack overlay
+//   • Combo border glow on answer field
+//   • Particle burst overlay on correct answer
+//   • Danger-state pulsing red hearts area
+//   • Victory / Defeat dialogs triggered by controller
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../controllers/arithmetic_controller.dart';
-import '../core/constants.dart';
+import '../painters/particle_burst_painter.dart';
 
-// ─── Screen-level color constants ────────────────────────────────────────────
-
-const _kBg          = Color(0xFF10172A);
-const _kCard        = Color(0xFF1A2540);
-const _kCardBorder  = Color(0xFF1E2D4A);
-const _kGreen       = Color(0xFF00E5BC);   // Spring Green — primary accent
-const _kGreenText   = Color(0xFF032B22);   // text ON green
-const _kBlue        = Color(0xFF1F78FF);   // Electric Blue — secondary
-const _kRed         = Color(0xFFFF4B4B);   // hearts / wrong
-const _kGold        = Color(0xFFFFD700);   // score star
-const _kKeyNum      = Color(0xFF1E2D4A);   // number key bg
-const _kKeyDel      = Color(0xFF2A1A28);   // delete key bg
-const _kTextPrimary = Colors.white;
-const _kTextMuted   = Color(0xFF4A6080);
-const _kTextDim     = Color(0xFF2E4060);
-
-// ─── View ─────────────────────────────────────────────────────────────────────
-
-class ArithmeticChallengeView extends GetView<ArithmeticController> {
+class ArithmeticChallengeView extends StatefulWidget {
   const ArithmeticChallengeView({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
-      child: Scaffold(
-        backgroundColor: _kBg,
-        body: SafeArea(
-          child: Obx(() {
-            // Full-screen overlay when game ends
-            if (controller.gameState.value == GameState.timeUp ||
-                controller.gameState.value == GameState.gameOver) {
-              return _GameEndOverlay(
-                isTimeUp: controller.gameState.value == GameState.timeUp,
-              );
-            }
-            return _GamePlayBody();
-          }),
-        ),
-      ),
-    );
-  }
+  State<ArithmeticChallengeView> createState() =>
+      _ArithmeticChallengeViewState();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// GAME PLAY BODY
-// ═══════════════════════════════════════════════════════════════════════════════
+class _ArithmeticChallengeViewState extends State<ArithmeticChallengeView>
+    with SingleTickerProviderStateMixin {
 
-class _GamePlayBody extends GetView<ArithmeticController> {
+  late final ArithmeticController _ctrl;
+
+  // Danger pulse animation (hearts area)
+  late final AnimationController _dangerCtrl;
+  late final Animation<double>   _dangerPulse;
+
   @override
-  Widget build(BuildContext context) {
-    final h = MediaQuery.of(context).size.height;
+  void initState() {
+    super.initState();
+    _ctrl = Get.find<ArithmeticController>();
 
-    return Column(
-      children: [
-        SizedBox(height: h * 0.015),
-        const _Header(),
-        SizedBox(height: h * 0.012),
-        const _ProgressBar(),
-        SizedBox(height: h * 0.012),
-        const _HeartsRow(),
-        const _StreakBar(),
-        SizedBox(height: h * 0.012),
-        const _EquationBox(),
-        SizedBox(height: h * 0.01),
-        const _InputArea(),
-        SizedBox(height: h * 0.012),
-        const Expanded(child: _NumberPad()),
-        SizedBox(height: h * 0.01),
-      ],
+    // Register this vsync provider so the controller's Ticker can use it
+    // (if you follow the TickerProvider injection pattern)
+    try { Get.put<TickerProvider>(this, permanent: false); } catch (_) {}
+
+    _dangerCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
     );
+    _dangerPulse = Tween(begin: 0.0, end: 1.0).animate(
+        CurvedAnimation(parent: _dangerCtrl, curve: Curves.easeInOut));
+
+    // Watch danger state
+    ever(_ctrl.dangerState, (bool danger) {
+      if (danger) {
+        _dangerCtrl.repeat(reverse: true);
+      } else {
+        _dangerCtrl.stop();
+        _dangerCtrl.value = 0;
+      }
+    });
   }
-}
-
-// ─── Header ───────────────────────────────────────────────────────────────────
-
-class _Header extends GetView<ArithmeticController> {
-  const _Header();
 
   @override
+  void dispose() {
+    _dangerCtrl.dispose();
+    super.dispose();
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────────
+  @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          // Close button
-          _CircleButton(
-            icon:    Icons.close_rounded,
-            color:   _kTextMuted,
-            bgColor: _kCard,
-            onTap:   () => _showQuitDialog(context),
-          ),
-
-          // Timer pill — center
-          Expanded(
-            child: Center(
-              child: Obx(() {
-                final warn = controller.isTimeWarning;
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 18, vertical: 8),
-                  decoration: BoxDecoration(
-                    color:        _kCard,
-                    borderRadius: BorderRadius.circular(100),
-                    border:       Border.all(
-                      color: warn ? _kRed : _kGreen,
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        warn
-                            ? Icons.warning_amber_rounded
-                            : Icons.timer_outlined,
-                        size:  18,
-                        color: warn ? _kRed : _kGreen,
-                      ),
-                      const SizedBox(width: 7),
-                      Text(
-                        '${controller.timeLeft.value}s',
-                        style: TextStyle(
-                          fontSize:   20,
-                          fontWeight: FontWeight.w800,
-                          color:      warn ? _kRed : _kGreen,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-            ),
-          ),
-
-          // Score pill
-          Obx(() => Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color:        _kCard,
-              borderRadius: BorderRadius.circular(100),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+    return Scaffold(
+      backgroundColor: const Color(0xFF0D1B2A),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // ── Main column ──
+            Column(
               children: [
-                const Icon(Icons.star_rounded,
-                    size: 18, color: _kGold),
-                const SizedBox(width: 5),
-                Text(
-                  '${controller.score.value}',
-                  style: const TextStyle(
-                    fontSize:   17,
-                    fontWeight: FontWeight.w800,
-                    color:      _kTextPrimary,
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
-                ),
+                _buildTopBar(),
+                _buildProgressBar(),
+                const SizedBox(height: 8),
+                _buildHeartsRow(),
+                const SizedBox(height: 10),
+                Expanded(child: _buildEquationCard()),
+                _buildAnswerField(),
+                const SizedBox(height: 8),
+                _buildNumpad(),
+                const SizedBox(height: 8),
               ],
             ),
-          )),
-        ],
-      ),
-    );
-  }
 
-  void _showQuitDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: _kCard,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24)),
-        title: const Text('Quit session?',
-            style: TextStyle(color: _kTextPrimary,
-                fontWeight: FontWeight.w800)),
-        content: const Text(
-            'Your current progress won\'t be saved.',
-            style: TextStyle(color: _kTextMuted)),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Keep playing',
-                style: TextStyle(color: _kGreen,
-                    fontWeight: FontWeight.w700)),
-          ),
-          TextButton(
-            onPressed: () {
-              Get.back();
-              controller.stopGame();
-              Get.offAllNamed(Routes.dashboard);
-            },
-            child: const Text('Quit',
-                style: TextStyle(color: _kRed,
-                    fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Progress bar ─────────────────────────────────────────────────────────────
-
-class _ProgressBar extends GetView<ArithmeticController> {
-  const _ProgressBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(100),
-        child: Obx(() => TweenAnimationBuilder<double>(
-          tween:    Tween(end: controller.progress.value),
-          duration: const Duration(milliseconds: 500),
-          builder:  (_, v, __) => LinearProgressIndicator(
-            value:           v,
-            minHeight:       6,
-            backgroundColor: _kCard,
-            valueColor: AlwaysStoppedAnimation<Color>(
-              controller.isTimeWarning ? _kRed : _kGreen,
-            ),
-          ),
-        )),
-      ),
-    );
-  }
-}
-
-// ─── Hearts ───────────────────────────────────────────────────────────────────
-
-class _HeartsRow extends GetView<ArithmeticController> {
-  const _HeartsRow();
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() => Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(
-        ArithmeticController.maxLives,
-            (i) {
-          final alive = i < controller.lives.value;
-          return AnimatedOpacity(
-            opacity:  alive ? 1.0 : 0.2,
-            duration: const Duration(milliseconds: 300),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 5),
-              child: Icon(
-                alive ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                color: _kRed,
-                size:  26,
-              ),
-            ),
-          );
-        },
-      ),
-    ));
-  }
-}
-
-// ─── Streak bar ───────────────────────────────────────────────────────────────
-
-class _StreakBar extends GetView<ArithmeticController> {
-  const _StreakBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text('Streak',
-              style: TextStyle(fontSize: 12, color: _kTextMuted)),
-          Obx(() => Text(
-            controller.streakLabel,
-            style: const TextStyle(
-                fontSize: 12, color: _kGreen, fontWeight: FontWeight.w600),
-          )),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Equation box ─────────────────────────────────────────────────────────────
-
-class _EquationBox extends GetView<ArithmeticController> {
-  const _EquationBox();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        width:   double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
-        decoration: BoxDecoration(
-          color:        _kCard,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: _kCardBorder, width: 0.5),
-        ),
-        child: Column(
-          children: [
-            const Text(
-              'Solve the equation',
-              style: TextStyle(fontSize: 11, color: _kTextMuted,
-                  letterSpacing: 0.8, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 10),
+            // ── Floating label overlay ──
             Obx(() {
-              final flash = controller.equationFlash.value;
-              Color textColor = _kTextPrimary;
-              if (flash == 'correct') textColor = _kGreen;
-              if (flash == 'wrong')   textColor = _kRed;
-
-              return AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 120),
-                style: TextStyle(
-                  fontSize:     42,
-                  fontWeight:   FontWeight.w900,
-                  color:        textColor,
-                  letterSpacing: -1,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-                child: Text(
-                  controller.currentEquation.value?.toString() ?? '—',
+              final labels = _ctrl.floatingLabels.toList();
+              return IgnorePointer(
+                child: Stack(
+                  children: labels
+                      .map((l) => _FloatingLabelWidget(label: l))
+                      .toList(),
                 ),
               );
+            }),
+
+            // ── Particle burst overlay — re-keyed each tick ──
+            Obx(() {
+              final tick = _ctrl.particleBurstTick.value;
+              if (tick == 0) return const SizedBox.shrink();
+              return ParticleBurstOverlay(key: ValueKey(tick));
             }),
           ],
         ),
       ),
     );
   }
-}
 
-// ─── Input area ───────────────────────────────────────────────────────────────
+  // ── Top bar ───────────────────────────────────────────────────────────────────
+  Widget _buildTopBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+      child: Obx(() => Row(
+        children: [
+          // Quit button
+          _iconButton(
+              icon: Icons.close,
+              onTap: _ctrl.quitGame),
+          const SizedBox(width: 8),
+          // Timer pill
+          _pill(
+            icon: Icons.timer_outlined,
+            label: '${_ctrl.timeLeft.value}s',
+            color: _ctrl.timeLeft.value < 10
+                ? const Color(0xFFFF5252)
+                : const Color(0xFF00C896),
+          ),
+          const SizedBox(width: 8),
+          // Level pill
+          _pill(
+            icon: Icons.trending_up,
+            label: 'Level ${_ctrl.currentLevel.levelNumber}',
+            color: const Color(0xFF00C896),
+          ),
+          const Spacer(),
+          // Score
+          _pill(
+            icon: Icons.star,
+            label: '${_ctrl.score.value}',
+            color: const Color(0xFFFFB300),
+          ),
+        ],
+      )),
+    );
+  }
 
-class _InputArea extends GetView<ArithmeticController> {
-  const _InputArea();
+  Widget _iconButton(
+          {required IconData icon, required VoidCallback onTap}) =>
+      GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A2B3C),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Icon(icon, color: Colors.white70, size: 20),
+        ),
+      );
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _pill(
+          {required IconData icon,
+          required String label,
+          required Color color}) =>
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withOpacity(0.4)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 14),
+            const SizedBox(width: 4),
+            Text(label,
+                style: GoogleFonts.nunito(
+                    color: color,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800)),
+          ],
+        ),
+      );
+
+  // ── Progress bar ──────────────────────────────────────────────────────────────
+  Widget _buildProgressBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Obx(() => Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Level ${_ctrl.currentLevel.levelNumber} · ${_ctrl.currentLevel.label}',
+                style: GoogleFonts.nunito(
+                    fontSize: 11, color: Colors.white38),
+              ),
+              Text(
+                '${_ctrl.questionsAnswered.value} / ${_ctrl.currentLevel.questionsPerRound}',
+                style: GoogleFonts.nunito(
+                    fontSize: 11,
+                    color: Colors.white38,
+                    fontWeight: FontWeight.w700),
+              ),
+            ],
+          )),
+          const SizedBox(height: 4),
+          // Smoothly animated progress bar
+          Obx(() => TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: _ctrl.progressTarget.value),
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeOutCubic,
+            builder: (_, value, __) => ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: value,
+                minHeight: 6,
+                backgroundColor: const Color(0xFF1A2B3C),
+                valueColor: const AlwaysStoppedAnimation(Color(0xFF00C896)),
+              ),
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+
+  // ── Hearts row ────────────────────────────────────────────────────────────────
+  Widget _buildHeartsRow() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Obx(() {
-        final hasInput = controller.hasInput;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          width:   double.infinity,
-          height:  54,
-          padding: const EdgeInsets.symmetric(
-              horizontal: 20, vertical: 12),
-          decoration: BoxDecoration(
-            color:        _kCard,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: hasInput ? _kGreen : _kCardBorder,
-              width: hasInput ? 1.5 : 0.5,
+        final hearts = _ctrl.hearts.value;
+        final danger = _ctrl.dangerState.value;
+
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Hearts
+            ...List.generate(
+              3,
+              (i) => AnimatedBuilder(
+                animation: _dangerPulse,
+                builder: (_, __) {
+                  final isActive = i < hearts;
+                  final scale    = (isActive && danger)
+                      ? 1.0 + _dangerPulse.value * 0.15
+                      : 1.0;
+                  return Transform.scale(
+                    scale: scale,
+                    child: Icon(
+                      Icons.favorite,
+                      size: 28,
+                      color: isActive
+                          ? (danger
+                              ? Color.lerp(
+                                  const Color(0xFFFF5252),
+                                  const Color(0xFFFF1744),
+                                  _dangerPulse.value)!
+                              : const Color(0xFFFF5252))
+                          : Colors.white10,
+                    ),
+                  );
+                },
+              ),
             ),
+            const SizedBox(width: 16),
+            // Streak counter
+            Obx(() => Row(
+              children: [
+                Text('Streak',
+                    style: GoogleFonts.nunito(
+                        fontSize: 12, color: Colors.white38)),
+                const SizedBox(width: 6),
+                Text('${_ctrl.streak.value} in a row',
+                    style: GoogleFonts.nunito(
+                        fontSize: 12,
+                        color: Colors.white54,
+                        fontWeight: FontWeight.w700)),
+              ],
+            )),
+          ],
+        );
+      }),
+    );
+  }
+
+  // ── Equation card ─────────────────────────────────────────────────────────────
+  Widget _buildEquationCard() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: const Color(0xFF162033),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFF00C896).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                    color: const Color(0xFF00C896).withOpacity(0.4)),
+              ),
+              child: Text(
+                _ctrl.currentLevel.label,
+                style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    color: const Color(0xFF00C896),
+                    fontWeight: FontWeight.w700),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Obx(() => Text(
+              _ctrl.equation.value,
+              style: GoogleFonts.nunito(
+                fontSize: 44,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                letterSpacing: 1,
+              ),
+            )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Answer field ──────────────────────────────────────────────────────────────
+  Widget _buildAnswerField() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Obx(() {
+        final comboActive = _ctrl.comboActive.value;
+
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          height: 54,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF162033),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: comboActive
+                  ? const Color(0xFF00E676)
+                  : Colors.white12,
+              width: comboActive ? 2.0 : 1.0,
+            ),
+            boxShadow: comboActive
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF00E676).withOpacity(0.3),
+                      blurRadius: 16,
+                      spreadRadius: 2,
+                    )
+                  ]
+                : null,
           ),
           child: Row(
             children: [
-              Text(
-                hasInput ? controller.inputValue.value : '_',
-                style: TextStyle(
-                  fontSize:   26,
-                  fontWeight: FontWeight.w800,
-                  color:      hasInput ? _kTextPrimary : _kTextDim,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+              // Blinking cursor
+              _BlinkingCursor(),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  _ctrl.userInput.value.isEmpty
+                      ? 'Type your answer'
+                      : _ctrl.userInput.value,
+                  style: GoogleFonts.nunito(
+                    fontSize: 18,
+                    color: _ctrl.userInput.value.isEmpty
+                        ? Colors.white24
+                        : Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-              if (hasInput) ...[
-                const SizedBox(width: 3),
-                const _BlinkingCursor(),
-              ],
-              const Spacer(),
-              if (!hasInput)
-                const Text('Type your answer',
-                    style: TextStyle(fontSize: 13, color: _kTextDim)),
             ],
           ),
         );
       }),
     );
   }
+
+  // ── Numpad ────────────────────────────────────────────────────────────────────
+  Widget _buildNumpad() {
+    const rows = [
+      ['7', '8', '9'],
+      ['4', '5', '6'],
+      ['1', '2', '3'],
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Column(
+        children: [
+          ...rows.map(
+            (row) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: row
+                    .map((k) => Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: _NumKey(
+                                label: k,
+                                onTap: () => _ctrl.onKeyTap(k)),
+                          ),
+                        ))
+                    .toList(),
+              ),
+            ),
+          ),
+          // Bottom row: delete | 0 | submit
+          Row(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: _NumKey(
+                    label: '⌫',
+                    isDelete: true,
+                    onTap: () => _ctrl.onKeyTap('backspace'),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: _NumKey(
+                      label: '0', onTap: () => _ctrl.onKeyTap('0')),
+                ),
+              ),
+              // Submit button wrapped in particle-burst stack
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: _SubmitKey(onTap: _ctrl.onSubmit),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _BlinkingCursor extends StatefulWidget {
-  const _BlinkingCursor();
+// ── Number key widget ─────────────────────────────────────────────────────────
+class _NumKey extends StatefulWidget {
+  final String label;
+  final VoidCallback onTap;
+  final bool isDelete;
 
+  const _NumKey({
+    required this.label,
+    required this.onTap,
+    this.isDelete = false,
+  });
+
+  @override
+  State<_NumKey> createState() => _NumKeyState();
+}
+
+class _NumKeyState extends State<_NumKey>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double>   _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 100));
+    _scale = Tween(begin: 1.0, end: 0.88).animate(
+        CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _ctrl.forward(),
+      onTapUp: (_) {
+        _ctrl.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _ctrl.reverse(),
+      child: ScaleTransition(
+        scale: _scale,
+        child: Container(
+          height: 76,
+          decoration: BoxDecoration(
+            color: widget.isDelete
+                ? const Color(0xFF3B1A1A)
+                : const Color(0xFF1A2B3C),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Center(
+            child: Text(
+              widget.label,
+              style: GoogleFonts.nunito(
+                fontSize: widget.label.length > 1 ? 18 : 24,
+                fontWeight: FontWeight.w700,
+                color: widget.isDelete
+                    ? const Color(0xFFFF5252)
+                    : Colors.white,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Submit key ────────────────────────────────────────────────────────────────
+class _SubmitKey extends StatefulWidget {
+  final VoidCallback onTap;
+  const _SubmitKey({required this.onTap});
+
+  @override
+  State<_SubmitKey> createState() => _SubmitKeyState();
+}
+
+class _SubmitKeyState extends State<_SubmitKey>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double>   _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 100));
+    _scale = Tween(begin: 1.0, end: 0.88)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _ctrl.forward(),
+      onTapUp: (_) {
+        _ctrl.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _ctrl.reverse(),
+      child: ScaleTransition(
+        scale: _scale,
+        child: Container(
+          height: 76,
+          decoration: BoxDecoration(
+            color: const Color(0xFF00C896),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Center(
+            child: Icon(Icons.check_rounded, color: Colors.white, size: 30),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Blinking cursor ───────────────────────────────────────────────────────────
+class _BlinkingCursor extends StatefulWidget {
   @override
   State<_BlinkingCursor> createState() => _BlinkingCursorState();
 }
@@ -416,279 +603,98 @@ class _BlinkingCursorState extends State<_BlinkingCursor>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-      vsync:    this,
-      duration: const Duration(milliseconds: 900),
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
     )..repeat(reverse: true);
   }
 
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return FadeTransition(
       opacity: _ctrl,
-      child:   Container(
-        width: 2, height: 28,
-        color: _kGreen,
-      ),
-    );
-  }
-}
-
-// ─── Number pad ───────────────────────────────────────────────────────────────
-
-class _NumberPad extends GetView<ArithmeticController> {
-  const _NumberPad();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GridView.count(
-        crossAxisCount:  3,
-        mainAxisSpacing:  8,
-        crossAxisSpacing: 8,
-        childAspectRatio: 1.3,
-        physics: const NeverScrollableScrollPhysics(),
-        children: [
-          // Row 1
-          _NumKey('7'), _NumKey('8'), _NumKey('9'),
-          // Row 2
-          _NumKey('4'), _NumKey('5'), _NumKey('6'),
-          // Row 3
-          _NumKey('1'), _NumKey('2'), _NumKey('3'),
-          // Row 4
-          _DelKey(), _NumKey('0'), _CheckKey(),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Individual key widgets ────────────────────────────────────────────────────
-
-class _NumKey extends GetView<ArithmeticController> {
-  final String digit;
-  const _NumKey(this.digit);
-
-  @override
-  Widget build(BuildContext context) {
-    return _KeyBase(
-      bgColor:  _kKeyNum,
-      onTap:    () => controller.onDigitTap(digit),
-      child:    Text(digit,
-          style: const TextStyle(fontSize: 22,
-              fontWeight: FontWeight.w700, color: _kTextPrimary)),
-    );
-  }
-}
-
-class _DelKey extends GetView<ArithmeticController> {
-  @override
-  Widget build(BuildContext context) {
-    return _KeyBase(
-      bgColor: _kKeyDel,
-      onTap:   controller.onDeleteTap,
-      child:   const Icon(
-        Icons.backspace_outlined,
-        size: 22, color: _kRed,
-      ),
-    );
-  }
-}
-
-class _CheckKey extends GetView<ArithmeticController> {
-  @override
-  Widget build(BuildContext context) {
-    return _KeyBase(
-      bgColor: _kGreen,
-      onTap:   controller.onCheckTap,
-      child:   const Icon(
-        Icons.check_rounded,
-        size: 26, color: _kGreenText,
-      ),
-    );
-  }
-}
-
-class _KeyBase extends StatefulWidget {
-  final Color    bgColor;
-  final Widget   child;
-  final VoidCallback onTap;
-
-  const _KeyBase({
-    required this.bgColor,
-    required this.child,
-    required this.onTap,
-  });
-
-  @override
-  State<_KeyBase> createState() => _KeyBaseState();
-}
-
-class _KeyBaseState extends State<_KeyBase> {
-  double _scale = 1.0;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown:  (_) => setState(() => _scale = 0.93),
-      onTapUp:    (_) { setState(() => _scale = 1.0); widget.onTap(); },
-      onTapCancel: () => setState(() => _scale = 1.0),
-      child: AnimatedScale(
-        scale:    _scale,
-        duration: const Duration(milliseconds: 90),
-        child:    Container(
-          decoration: BoxDecoration(
-            color:        widget.bgColor,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Center(child: widget.child),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Circle button ────────────────────────────────────────────────────────────
-
-class _CircleButton extends StatelessWidget {
-  final IconData icon;
-  final Color    color;
-  final Color    bgColor;
-  final VoidCallback onTap;
-
-  const _CircleButton({
-    required this.icon,
-    required this.color,
-    required this.bgColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
       child: Container(
-        width:  40, height: 40,
-        decoration: BoxDecoration(
-            color: bgColor, shape: BoxShape.circle),
-        child: Icon(icon, size: 20, color: color),
+        width: 2,
+        height: 20,
+        color: const Color(0xFF00C896),
       ),
     );
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// GAME END OVERLAY
-// ═══════════════════════════════════════════════════════════════════════════════
+// ── Floating label widget ─────────────────────────────────────────────────────
+/// Animates upward and fades out, positioned in the centre of the screen.
+class _FloatingLabelWidget extends StatefulWidget {
+  final FloatingLabel label;
+  const _FloatingLabelWidget({required this.label});
 
-class _GameEndOverlay extends GetView<ArithmeticController> {
-  final bool isTimeUp;
-  const _GameEndOverlay({required this.isTimeUp});
+  @override
+  State<_FloatingLabelWidget> createState() => _FloatingLabelWidgetState();
+}
+
+class _FloatingLabelWidgetState extends State<_FloatingLabelWidget>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double>   _offset;
+  late final Animation<double>   _fade;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..forward();
+
+    _offset = Tween(begin: 0.0, end: -80.0)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+    _fade   = Tween(begin: 1.0, end: 0.0)
+        .animate(CurvedAnimation(
+            parent: _ctrl, curve: const Interval(0.55, 1.0)));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Container(
-          padding:     const EdgeInsets.all(28),
-          decoration:  BoxDecoration(
-            color:        _kCard,
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: _kCardBorder, width: 0.5),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isTimeUp
-                    ? Icons.hourglass_empty_rounded
-                    : Icons.heart_broken_rounded,
-                size:  56,
-                color: isTimeUp ? _kGold : _kRed,
+    return Positioned(
+      // Horizontally centred, vertically placed above the numpad
+      left: 0,
+      right: 0,
+      bottom: 180,
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder: (_, child) => Transform.translate(
+          offset: Offset(0, _offset.value),
+          child: Opacity(opacity: _fade.value, child: child),
+        ),
+        child: Center(
+          child: Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+            decoration: BoxDecoration(
+              color: widget.label.color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(20),
+              border:
+                  Border.all(color: widget.label.color.withOpacity(0.5)),
+            ),
+            child: Text(
+              widget.label.text,
+              style: GoogleFonts.nunito(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: widget.label.color,
               ),
-              const SizedBox(height: 14),
-              Text(
-                isTimeUp ? "Time's up!" : 'Game over',
-                style: const TextStyle(fontSize: 26,
-                    fontWeight: FontWeight.w900, color: _kTextPrimary),
-              ),
-              const SizedBox(height: 10),
-              // Score row
-              Obx(() => Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.star_rounded,
-                      size: 20, color: _kGold),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${controller.score.value} points',
-                    style: const TextStyle(fontSize: 18,
-                        fontWeight: FontWeight.w700, color: _kTextPrimary),
-                  ),
-                ],
-              )),
-              const SizedBox(height: 4),
-              Obx(() => Text(
-                'Best streak: ${controller.bestStreak.value}',
-                style: const TextStyle(
-                    fontSize: 14, color: _kTextMuted),
-              )),
-              const SizedBox(height: 8),
-              Text(
-                isTimeUp
-                    ? "Great session! Every rep sharpens your mind."
-                    : "Brainy believes in you — try again!",
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, color: _kTextMuted),
-              ),
-              const SizedBox(height: 24),
-              // Play again
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _kGreen,
-                    foregroundColor: _kGreenText,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(100)),
-                    elevation: 0,
-                  ),
-                  onPressed: () {
-                    HapticFeedback.mediumImpact();
-                    controller.startGame();
-                  },
-                  child: const Text('Play again',
-                      style: TextStyle(fontSize: 17,
-                          fontWeight: FontWeight.w800)),
-                ),
-              ),
-              const SizedBox(height: 10),
-              // Back to dashboard
-              SizedBox(
-                width:  double.infinity,
-                height: 52,
-                child:  OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: _kTextMuted,
-                    side: const BorderSide(color: _kCardBorder),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(100)),
-                  ),
-                  onPressed: () {
-                    controller.stopGame();
-                    Get.offAllNamed(Routes.dashboard);
-                  },
-                  child: const Text('Back to dashboard',
-                      style: TextStyle(fontSize: 15,
-                          fontWeight: FontWeight.w600)),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

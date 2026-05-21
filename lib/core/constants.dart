@@ -49,7 +49,7 @@ abstract class StorageKeys {
   static const trainingMinutes   = 'training_minutes';  // int
   static const difficultyPct     = 'difficulty_pct';    // int 5–100 (Complexity)
   static const conditionSecs     = 'condition_secs';    // int (legacy; now Focus Score)
-
+  static const avgAccuracy = 'avg_accuracy'; // int 0–100 (rolling EMA %)
   // Streak
   static const currentStreak    = 'current_streak';    // int
   static const lastStreakDate   = 'last_streak_date';  // String yyyy-MM-dd

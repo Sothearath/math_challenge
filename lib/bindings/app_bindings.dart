@@ -40,8 +40,8 @@ class DashboardBinding extends Bindings {
 class GameBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut(() => GameController());
-    Get.lazyPut(() => GameMapController());
-    Get.lazyPut<ArithmeticController>(() => ArithmeticController());
+    // Get.lazyPut(() => GameController());
+    // Get.lazyPut(() => GameMapController());
+    Get.lazyPut<ArithmeticController>(() => ArithmeticController(), fenix: true,);
   }
 }

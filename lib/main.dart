@@ -54,11 +54,11 @@ class MathChallengeApp extends StatelessWidget {
           page:    () => const BrainyDashboardView(),
           binding: DashboardBinding(),
         ),
-        // GetPage(
-        //   name:    Routes.game,
-        //   page:    () => const GameView(),
-        //   binding: GameBinding(),
-        // ),
+        GetPage(
+          name:    Routes.game,
+          page:    () => const ArithmeticChallengeView(),
+          binding: GameBinding(),
+        ),
         GetPage(
           name:    Routes.result,
           page:    () => const ResultView(),
@@ -78,12 +78,6 @@ class MathChallengeApp extends StatelessWidget {
         GetPage(
           name:    Routes.awards,
           page:    () => const AwardsView(),
-        ),
-        GetPage(
-          name:       Routes.game,
-          page:       () => const ArithmeticChallengeView(),
-          binding:    GameBinding(),
-          transition: Transition.fadeIn,
         ),
       ],
     );

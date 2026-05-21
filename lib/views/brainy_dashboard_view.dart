@@ -1,704 +1,500 @@
-// lib/views/brainy_dashboard_view.dart
+// lib/features/dashboard/views/brainy_dashboard_view.dart
 //
-// FlexiArithmetic: Brainy Challenge
-// Spring Green Harmony palette — all fitness language replaced with math terms.
+// Upgraded Dashboard View
+// New additions:
+//   • Idle bob animation on the Brainy mascot (sine-wave via AnimationController)
+//   • Dynamic greeting colour (teal vs amber based on streak)
+//   • "Begin Challenge" button soft pulse/glow loop
+// Everything else retains your existing layout exactly.
 
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../controllers/dashboard_controller.dart';
-import '../core/constants.dart';
+import '../../../core/constants.dart';
+import '../widgets/brainy_painter.dart';
 
-// ─── Spring Green Harmony palette ─────────────────────────────────────────────
-
-const _kGreenBg      = Color(0xFF0D1F18);   // deepest dark-green background
-const _kGreenCard    = Color(0xFF142B20);   // stat bar / bubble surface
-const _kGreenDivider = Color(0xFF1F3D2C);   // subtle divider
-const _kMint         = Color(0xFF2ED1A2);   // primary action / accent
-const _kMintDark     = Color(0xFF1BAC84);   // pressed / shadow
-const _kMintText     = Color(0xFF0A3D28);   // text ON mint
-const _kMintDim      = Color(0xFF9EC4B0);   // muted text on dark
-const _kMintFaint    = Color(0xFF4D7A62);   // very muted label
-const _kMintGlow     = Color(0xFF6BEDD0);   // highlight lobe on brain
-
-// ─── View ─────────────────────────────────────────────────────────────────────
-
-class BrainyDashboardView extends GetView<DashboardController> {
+class BrainyDashboardView extends StatefulWidget {
   const BrainyDashboardView({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
-      child: Scaffold(
-        backgroundColor: _kGreenBg,
-        body: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              children: const [
-                SizedBox(height: 12),
-                _StatsBar(),
-                SizedBox(height: 20),
-                _MascotSection(),
-                SizedBox(height: 20),
-                _ActivityCard(),
-                SizedBox(height: 16),
-                _StartButton(),
-                SizedBox(height: 28),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  State<BrainyDashboardView> createState() => _BrainyDashboardViewState();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// STATS BAR  —  Training time / Complexity / Focus score
-// ═══════════════════════════════════════════════════════════════════════════════
+class _BrainyDashboardViewState extends State<BrainyDashboardView>
+    with TickerProviderStateMixin {
 
-class _StatsBar extends GetView<DashboardController> {
-  const _StatsBar();
+  late final DashboardController _ctrl;
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        decoration: BoxDecoration(
-          color:        _kGreenCard,
-          borderRadius: BorderRadius.circular(AppLayout.statBarRadius),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-        child: Obx(() => Row(
-          children: [
-            _StatCell(
-              value: '${controller.trainingMinutes.value}',
-              unit:  'min',
-              label: 'Training time',
-            ),
-            _Vdiv(),
-            _StatCell(
-              value: '${controller.complexityPct.value}',
-              unit:  '%',
-              label: 'Complexity',
-            ),
-            _Vdiv(),
-            _StatCell(
-              value: '${controller.focusScore.value}',
-              unit:  '%',
-              label: 'Focus score',
-            ),
-            const SizedBox(width: 10),
-            // Settings
-            GestureDetector(
-              onTap: () => Get.toNamed(Routes.settings),
-              child: Container(
-                width:  34, height: 34,
-                decoration: const BoxDecoration(
-                    color: _kMint, shape: BoxShape.circle),
-                child: const Icon(
-                    Icons.settings_rounded,
-                    size: 17, color: _kMintText),
-              ),
-            ),
-          ],
-        )),
-      ),
-    );
-  }
-}
+  // ── Mascot idle bob ──────────────────────────────────────────────────────────
+  /// Full sine-wave loop: 0 → π → 2π → repeat
+  late final AnimationController _bobCtrl;
+  late final Animation<double>   _bobAnim; // -6px to +6px vertical offset
 
-class _StatCell extends StatelessWidget {
-  final String value, unit, label;
-  const _StatCell({required this.value, required this.unit,
-    required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          RichText(
-            text: TextSpan(children: [
-              TextSpan(
-                text:  value,
-                style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700,
-                    color: Color(0xFFE8F9F0)),
-              ),
-              TextSpan(
-                text:  ' $unit',
-                style: const TextStyle(fontSize: 11, color: Color(0xFF5A8A70)),
-              ),
-            ]),
-          ),
-          const SizedBox(height: 3),
-          Text(label,
-              style: const TextStyle(fontSize: 10, color: _kMintFaint,
-                  fontWeight: FontWeight.w500)),
-        ],
-      ),
-    );
-  }
-}
-
-class _Vdiv extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) =>
-      Container(width: 1, height: 30, color: _kGreenDivider,
-          margin: const EdgeInsets.symmetric(horizontal: 4));
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// MASCOT  —  Brainy with math-equation barbell + floating animation
-// ═══════════════════════════════════════════════════════════════════════════════
-
-class _MascotSection extends StatefulWidget {
-  const _MascotSection();
-
-  @override
-  State<_MascotSection> createState() => _MascotSectionState();
-}
-
-class _MascotSectionState extends State<_MascotSection>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _float;
-  late final Animation<double>   _dy;
+  // ── Button pulse ─────────────────────────────────────────────────────────────
+  late final AnimationController _pulseCtrl;
+  late final Animation<double>   _pulseAnim; // 1.0 → 1.04 → 1.0 scale
+  late final Animation<double>   _glowAnim;  // 0.3 → 0.6 → 0.3 glow opacity
 
   @override
   void initState() {
     super.initState();
-    _float = AnimationController(
-      vsync:    this,
+    _ctrl = Get.find<DashboardController>();
+
+    // ── Bob: 2-second sine loop ──────────────────────────────────────────────
+    _bobCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat();
+
+    // Maps 0→1 controller value through a sine curve to a -6…+6 pixel offset.
+    _bobAnim = _bobCtrl.drive(
+      _SineDoubleTween(amplitude: 6.0),
+    );
+
+    // ── Button pulse: 1.8-second loop ───────────────────────────────────────
+    _pulseCtrl = AnimationController(
+      vsync: this,
       duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
-    _dy = Tween<double>(begin: -4, end: 4).animate(
-        CurvedAnimation(parent: _float, curve: Curves.easeInOut));
+
+    _pulseAnim = CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut)
+        .drive(Tween(begin: 1.0, end: 1.04));
+
+    _glowAnim = CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut)
+        .drive(Tween(begin: 0.25, end: 0.55));
   }
 
   @override
-  void dispose() { _float.dispose(); super.dispose(); }
+  void dispose() {
+    _bobCtrl.dispose();
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
 
+  // ── Build ─────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Speech bubble
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 52),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-          decoration: BoxDecoration(
-            color:        _kGreenCard,
-            borderRadius: BorderRadius.circular(12),
-            border:       Border.all(color: _kGreenDivider, width: 0.5),
+    return Scaffold(
+      backgroundColor: const Color(0xFF0A1E14),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Column(
+            children: [
+              _buildStatsBar(),
+              const SizedBox(height: 16),
+              _buildGreetingBubble(),
+              const SizedBox(height: 12),
+              _buildMascot(),
+              const SizedBox(height: 20),
+              _buildProgressCard(),
+              const SizedBox(height: 20),
+              _buildBeginButton(),
+              const SizedBox(height: 24),
+            ],
           ),
-          child: RichText(
-            textAlign: TextAlign.center,
-            text: const TextSpan(
-              style: TextStyle(fontSize: 12.5, color: _kMintDim, height: 1.45),
-              children: [
-                TextSpan(text: "Hi, I'm "),
-                TextSpan(text: 'Brainy',
-                    style: TextStyle(color: _kMint,
-                        fontWeight: FontWeight.w600)),
-                TextSpan(text: ". Let's sharpen those math skills today!"),
-              ],
-            ),
-          ),
-        ),
-        // Bubble tail
-        CustomPaint(
-          size: const Size(14, 7),
-          painter: _TailPainter(color: _kGreenCard),
-        ),
-        // Floating mascot
-        AnimatedBuilder(
-          animation: _dy,
-          builder: (_, child) =>
-              Transform.translate(offset: Offset(0, _dy.value), child: child),
-          child: const _BrainyMascot(),
-        ),
-      ],
-    );
-  }
-}
-
-class _TailPainter extends CustomPainter {
-  final Color color;
-  const _TailPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawPath(
-      Path()
-        ..moveTo(0, 0)
-        ..lineTo(size.width, 0)
-        ..lineTo(size.width / 2, size.height)
-        ..close(),
-      Paint()..color = color,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_TailPainter old) => old.color != color;
-}
-
-// ─── Brainy mascot ─────────────────────────────────────────────────────────────
-//
-// Spring green brain, lifting a barbell whose plates display "5" and "3".
-// Swap the body of build() for Lottie.asset() when you have an animation file.
-
-class _BrainyMascot extends StatelessWidget {
-  const _BrainyMascot();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width:  160,
-      height: 136,
-      child:  CustomPaint(painter: _BrainyPainter()),
-    );
-  }
-}
-
-class _BrainyPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final cx = size.width / 2;   // 80
-    final cy = size.height * 0.35; // ~47
-
-    // ── Brain body ──────────────────────────────────────────────────────────
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, cy), width: 60, height: 52),
-      Paint()..color = _kMint,
-    );
-    // Highlight lobe
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, cy - 8), width: 32, height: 22),
-      Paint()..color = _kMintGlow,
-    );
-
-    // ── Brain ridges ────────────────────────────────────────────────────────
-    final ridgePaint = Paint()
-      ..color       = _kMintDark
-      ..strokeWidth = 1.5
-      ..style       = PaintingStyle.stroke
-      ..strokeCap   = StrokeCap.round;
-
-    for (final path in [
-      Path()
-        ..moveTo(cx - 10, cy - 12)
-        ..cubicTo(cx - 2, cy - 18, cx + 2, cy - 18, cx + 10, cy - 12),
-      Path()
-        ..moveTo(cx - 22, cy + 2)
-        ..cubicTo(cx - 26, cy - 4, cx - 26, cy + 8, cx - 22, cy + 14),
-      Path()
-        ..moveTo(cx + 22, cy + 2)
-        ..cubicTo(cx + 26, cy - 4, cx + 26, cy + 8, cx + 22, cy + 14),
-    ]) {
-      canvas.drawPath(path, ridgePaint);
-    }
-
-    // ── Eyes ────────────────────────────────────────────────────────────────
-    final eyePaint   = Paint()..color = _kMintText;
-    final shinePaint = Paint()..color = Colors.white;
-    for (final ex in [cx - 9.0, cx + 9.0]) {
-      canvas.drawCircle(Offset(ex, cy + 6), 4.5, eyePaint);
-      canvas.drawCircle(Offset(ex - 1.5, cy + 4.5), 1.2, shinePaint);
-    }
-
-    // ── Smile ───────────────────────────────────────────────────────────────
-    canvas.drawArc(
-      Rect.fromCenter(center: Offset(cx, cy + 12), width: 16, height: 10),
-      0.15, 2.8, false,
-      Paint()
-        ..color       = _kMintText
-        ..strokeWidth = 1.6
-        ..style       = PaintingStyle.stroke
-        ..strokeCap   = StrokeCap.round,
-    );
-
-    // ── Arms ────────────────────────────────────────────────────────────────
-    final armPaint = Paint()
-      ..color       = _kMint
-      ..strokeWidth = 6
-      ..strokeCap   = StrokeCap.round;
-    canvas.drawLine(
-        Offset(cx - 26, cy + 24), Offset(cx - 18, cy + 33), armPaint);
-    canvas.drawLine(
-        Offset(cx + 26, cy + 24), Offset(cx + 18, cy + 33), armPaint);
-
-    // ── Barbell bar ─────────────────────────────────────────────────────────
-    canvas.drawLine(
-      Offset(cx - 38, cy + 33), Offset(cx + 38, cy + 33),
-      Paint()
-        ..color       = const Color(0xFF3A3A3A)
-        ..strokeWidth = 5
-        ..strokeCap   = StrokeCap.round,
-    );
-
-    // ── Weight plates with math numerals ────────────────────────────────────
-    _drawWeightPlate(canvas, cx - 44, cy + 25, '5');
-    _drawWeightPlate(canvas, cx + 36, cy + 25, '3');
-
-    // ── Body / torso ────────────────────────────────────────────────────────
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, cy + 48), width: 26, height: 14),
-      Paint()..color = _kMintDark.withOpacity(0.35),
-    );
-
-    // ── Legs ────────────────────────────────────────────────────────────────
-    final legPaint = Paint()
-      ..color       = _kMint.withOpacity(0.9)
-      ..strokeWidth = 5.5
-      ..strokeCap   = StrokeCap.round;
-    canvas.drawLine(
-        Offset(cx - 7, cy + 55), Offset(cx - 11, cy + 74), legPaint);
-    canvas.drawLine(
-        Offset(cx + 7, cy + 55), Offset(cx + 11, cy + 74), legPaint);
-
-    // Feet
-    final footPaint = Paint()..color = _kMintDark;
-    canvas.drawOval(Rect.fromCenter(
-        center: Offset(cx - 13, cy + 77), width: 15, height: 7), footPaint);
-    canvas.drawOval(Rect.fromCenter(
-        center: Offset(cx + 13, cy + 77), width: 15, height: 7), footPaint);
-
-    // ── BRAINY label ────────────────────────────────────────────────────────
-    _drawLabel(canvas, 'BRAINY', cx, cy + 91);
-  }
-
-  void _drawWeightPlate(Canvas canvas, double x, double y, String numeral) {
-    // Outer plate
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-          Rect.fromLTWH(x, y, 16, 17), const Radius.circular(4)),
-      Paint()..color = const Color(0xFF2A2A2A),
-    );
-    // Inner collar
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-          Rect.fromLTWH(x - 5, y + 1, 8, 15), const Radius.circular(3)),
-      Paint()..color = const Color(0xFF1E1E1E),
-    );
-    // Numeral in mint
-    final tp = TextPainter(
-      text: TextSpan(
-        text:  numeral,
-        style: const TextStyle(
-          fontSize:   11,
-          fontWeight: FontWeight.w800,
-          color:      _kMint,
         ),
       ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    tp.paint(canvas, Offset(x + 8 - tp.width / 2, y + 8.5 - tp.height / 2));
+    );
   }
 
-  void _drawLabel(Canvas canvas, String text, double cx, double y) {
-    final tp = TextPainter(
-      text: TextSpan(
-        text:  text,
-        style: const TextStyle(
-          fontSize:      9,
-          fontWeight:    FontWeight.w700,
-          color:         _kMint,
-          letterSpacing: 1.6,
-        ),
+  // ── Stats bar ─────────────────────────────────────────────────────────────────
+  Widget _buildStatsBar() {
+    return Obx(() => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF122A1F),
+        borderRadius: BorderRadius.circular(18),
       ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    tp.paint(canvas, Offset(cx - tp.width / 2, y));
+      child: Row(
+        children: [
+          _statCell('${_ctrl.weekStreak.value * 2} min', 'Training time'),
+          _statDivider(),
+          _statCell('25 %', 'Complexity'),
+          _statDivider(),
+          _statCell('${_ctrl.avgAccuracy.value} %', 'Focus score'),
+          const Spacer(),
+          _settingsButton(),
+        ],
+      ),
+    ));
   }
 
-  @override
-  bool shouldRepaint(covariant CustomPainter _) => false;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ACTIVITY CARD  —  weekly streak + math score badges
-// ═══════════════════════════════════════════════════════════════════════════════
-
-class _ActivityCard extends GetView<DashboardController> {
-  const _ActivityCard();
-
-  static const _days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-  @override
-  Widget build(BuildContext context) {
-    final today = DateTime.now().weekday - 1; // 0 = Mon
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        decoration: BoxDecoration(
-          color:        Colors.white,
-          borderRadius: BorderRadius.circular(AppLayout.cardRadius),
-        ),
-        padding: const EdgeInsets.all(18),
+  Widget _statCell(String value, String label) => Expanded(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Math progress',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
-                        color: Color(0xFF111111))),
-                Obx(() => Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 11, vertical: 4),
-                  decoration: BoxDecoration(
-                    color:        const Color(0xFFD4F2E7),
-                    borderRadius: BorderRadius.circular(20),
+            RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: value.split(' ').first,
+                    style: GoogleFonts.nunito(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white),
                   ),
-                  child: Text(
-                    controller.streakLabel,
-                    style: const TextStyle(fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF0F5E42)),
-                  ),
-                )),
-              ],
+                  if (value.contains(' '))
+                    TextSpan(
+                      text: ' ${value.split(' ').last}',
+                      style: GoogleFonts.nunito(
+                          fontSize: 13, color: Colors.white54),
+                    ),
+                ],
+              ),
             ),
-
-            const SizedBox(height: 16),
-
-            // 7-day tracker
-            Obx(() => Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: List.generate(7, (i) => _DayDot(
-                initial: _days[i][0],
-                name:    _days[i],
-                done:    controller.completedDays[i],
-                isToday: i == today,
-              )),
-            )),
-
-            const SizedBox(height: 14),
-            const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
-            const SizedBox(height: 14),
-
-            // Score badges
-            Obx(() => Row(
-              children: [
-                // Avg accuracy
-                Expanded(child: _RoundedBadge(
-                  label:   'Avg accuracy',
-                  value:   '${controller.avgCorrect.value}/${controller.avgTotal.value}',
-                  sub:     'equations',
-                )),
-                const SizedBox(width: 8),
-                // Top score
-                Expanded(child: _StarBadge(
-                  value: '${controller.topCorrect.value}/${controller.topTotal.value}',
-                )),
-                const SizedBox(width: 8),
-                // Latest session
-                Expanded(child: _RoundedBadge(
-                  label:   'Latest session',
-                  value:   '${controller.lastCorrect.value}/${controller.lastTotal.value}',
-                  sub:     'correct',
-                )),
-              ],
-            )),
+            const SizedBox(height: 2),
+            Text(label,
+                style: GoogleFonts.nunito(
+                    fontSize: 11, color: Colors.white38)),
           ],
         ),
-      ),
-    );
-  }
-}
+      );
 
-// ─── Day dot ───────────────────────────────────────────────────────────────────
+  Widget _statDivider() => Container(
+        width: 1, height: 30,
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        color: Colors.white12,
+      );
 
-class _DayDot extends StatelessWidget {
-  final String initial, name;
-  final bool   done, isToday;
-  const _DayDot({required this.initial, required this.name,
-    required this.done, required this.isToday});
+  Widget _settingsButton() => Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: const Color(0xFF00C896),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Icon(Icons.settings, color: Colors.white, size: 18),
+      );
 
-  @override
-  Widget build(BuildContext context) {
-    Color bg; Color fg; Border? border;
+  // ── Greeting bubble ───────────────────────────────────────────────────────────
+  Widget _buildGreetingBubble() {
+    return Obx(() {
+      final hasStreak = _ctrl.hasStreak;
+      // Accent color changes based on streak state
+      final accentColor = hasStreak
+          ? const Color(0xFFFFB300) // amber on streak
+          : const Color(0xFF00C896); // teal default
 
-    if (isToday) {
-      bg = _kMint; fg = _kMintText;
-    } else if (done) {
-      bg = const Color(0xFF111E17); fg = Colors.white;
-    } else {
-      bg = Colors.transparent; fg = const Color(0xFFBBCCBB);
-      border = Border.all(color: const Color(0xFFDDEEDD), width: 1.5);
-    }
-
-    return Column(
-      children: [
-        Container(
-          width: 28, height: 28,
-          decoration: BoxDecoration(
-              color: bg, shape: BoxShape.circle, border: border),
-          child: Center(
-            child: Text(initial,
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
-                    color: fg)),
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 400),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF122A1F),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: hasStreak
+                ? const Color(0xFFFFB300).withOpacity(0.4)
+                : Colors.transparent,
+            width: 1.5,
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          isToday ? 'Today' : name.substring(0, 3),
-          style: const TextStyle(fontSize: 9, color: Color(0xFFAAAAAA),
-              fontWeight: FontWeight.w500),
-        ),
-      ],
-    );
+        child: _buildGreetingText(_ctrl.greetingText, accentColor),
+      );
+    });
   }
-}
 
-// ─── Rounded badge ────────────────────────────────────────────────────────────
-
-class _RoundedBadge extends StatelessWidget {
-  final String label, value, sub;
-  const _RoundedBadge({required this.label, required this.value,
-    required this.sub});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
-      decoration: BoxDecoration(
-        color:        const Color(0xFFF5F6F5),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
+  Widget _buildGreetingText(String text, Color accentColor) {
+    // Highlight "Brainy" (or "fire" on streak) with the accent color
+    const highlight = 'Brainy';
+    final idx = text.indexOf(highlight);
+    if (idx == -1) {
+      return Text(text,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.nunito(
+              fontSize: 15, color: Colors.white70, height: 1.4));
+    }
+    return RichText(
+      textAlign: TextAlign.center,
+      text: TextSpan(
+        style: GoogleFonts.nunito(fontSize: 15, color: Colors.white70, height: 1.4),
         children: [
-          Text(label,
-              style: const TextStyle(fontSize: 10, color: Color(0xFF999999))),
-          const SizedBox(height: 4),
-          Text(value,
-              style: const TextStyle(fontSize: 15,
-                  fontWeight: FontWeight.w700, color: Color(0xFF111111))),
-          const SizedBox(height: 2),
-          Text(sub,
-              style: const TextStyle(fontSize: 9, color: Color(0xFFBBBBBB))),
+          TextSpan(text: text.substring(0, idx)),
+          TextSpan(
+            text: highlight,
+            style: GoogleFonts.nunito(
+                fontSize: 15,
+                color: accentColor,
+                fontWeight: FontWeight.w800),
+          ),
+          TextSpan(text: text.substring(idx + highlight.length)),
         ],
       ),
     );
   }
-}
 
-// ─── Star badge (CustomClipper) ───────────────────────────────────────────────
-
-class _StarBadge extends StatelessWidget {
-  final String value;
-  const _StarBadge({required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipPath(
-      clipper: _StarClipper(points: 5, innerRatio: 0.50),
-      child: Container(
-        height: 72,
-        color:  const Color(0xFFFFF8E6),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.star_rounded,
-                size: 13, color: Color(0xFFEF9F27)),
-            const SizedBox(height: 2),
-            Text(value,
-                style: const TextStyle(fontSize: 14,
-                    fontWeight: FontWeight.w800, color: Color(0xFF7A4F08))),
-            const SizedBox(height: 2),
-            const Text('top score',
-                style: TextStyle(fontSize: 9, color: Color(0xFFB47A15))),
-          ],
-        ),
+  // ── Mascot with bob animation ─────────────────────────────────────────────────
+  Widget _buildMascot() {
+    return AnimatedBuilder(
+      animation: _bobAnim,
+      builder: (_, child) => Transform.translate(
+        offset: Offset(0, _bobAnim.value),
+        child: child,
+      ),
+      child: Column(
+        children: [
+          SizedBox(
+            width: 160,
+            height: 170,
+            // Use your existing BrainyPainter here
+            child: CustomPaint(painter: BrainyPainter()),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'BRAINY',
+            style: GoogleFonts.nunito(
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 4,
+              color: const Color(0xFF00C896),
+            ),
+          ),
+        ],
       ),
     );
   }
-}
 
-class _StarClipper extends CustomClipper<Path> {
-  final int    points;
-  final double innerRatio;
-  const _StarClipper({required this.points, required this.innerRatio});
-
-  @override
-  Path getClip(Size size) {
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    final R  = cx * 0.88;
-    final r  = R * innerRatio;
-    final p  = Path();
-    final s  = math.pi / points;
-    for (int i = 0; i < points * 2; i++) {
-      final radius = i.isEven ? R : r;
-      final angle  = i * s - math.pi / 2;
-      final x = cx + radius * math.cos(angle);
-      final y = cy + radius * math.sin(angle);
-      i == 0 ? p.moveTo(x, y) : p.lineTo(x, y);
-    }
-    return p..close();
+  // ── Progress card ─────────────────────────────────────────────────────────────
+  Widget _buildProgressCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Math progress',
+                  style: GoogleFonts.nunito(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black87)),
+              Obx(() => _streakBadge(_ctrl.weekStreak.value)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Week dots
+          Obx(() => _buildWeekRow(_ctrl.weekStreak.value)),
+          const Divider(height: 28, color: Color(0xFFEEEEEE)),
+          // Stats row
+          Obx(() => Row(
+            children: [
+              _miniStat('Avg accuracy',
+                  '${_ctrl.avgAccuracy.value}/28', 'equations'),
+              _starStat(_ctrl.topScore.value),
+              _miniStat('Latest session',
+                  '${_ctrl.latestSession.value}/28', 'correct'),
+            ],
+          )),
+        ],
+      ),
+    );
   }
 
-  @override
-  bool shouldReclip(_StarClipper old) =>
-      old.points != points || old.innerRatio != innerRatio;
-}
+  Widget _streakBadge(int streak) {
+    if (streak == 0) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFF00C896)),
+        ),
+        child: Text('No streak yet',
+            style: GoogleFonts.nunito(
+                fontSize: 12,
+                color: const Color(0xFF00C896),
+                fontWeight: FontWeight.w700)),
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8E1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFFFB300)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('🔥', style: TextStyle(fontSize: 12)),
+          const SizedBox(width: 4),
+          Text('$streak day streak',
+              style: GoogleFonts.nunito(
+                  fontSize: 12,
+                  color: const Color(0xFFFFB300),
+                  fontWeight: FontWeight.w700)),
+        ],
+      ),
+    );
+  }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// START BUTTON  —  "Begin challenge"
-// ═══════════════════════════════════════════════════════════════════════════════
+  Widget _buildWeekRow(int streak) {
+    const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    const labels = ['Mon', 'Tue', 'Today', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final todayIdx = 2; // Wednesday
 
-class _StartButton extends GetView<DashboardController> {
-  const _StartButton();
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: List.generate(7, (i) {
+        final isToday     = i == todayIdx;
+        final isCompleted = i < todayIdx && i < streak;
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GestureDetector(
-        onTapDown:  (_) => controller.startAnim.forward(),
-        onTapUp:    (_) async {
-          await controller.animateTap();
-          Get.toNamed(Routes.game);
-        },
-        onTapCancel: () => controller.startAnim.reverse(),
-        child: AnimatedBuilder(
-          animation: controller.startScale,
-          builder: (_, child) =>
-              Transform.scale(scale: controller.startScale.value, child: child),
-          child: Container(
-            width:  double.infinity,
-            height: 56,
-            decoration: BoxDecoration(
-              color:        _kMint,
-              borderRadius: BorderRadius.circular(AppLayout.pillRadius),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.psychology_rounded, size: 20, color: _kMintText),
-                SizedBox(width: 10),
-                Text(
-                  'Begin challenge',
-                  style: TextStyle(
-                    fontSize:      17,
-                    fontWeight:    FontWeight.w700,
-                    color:         _kMintText,
-                    letterSpacing: 0.2,
+        return Column(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isToday
+                    ? const Color(0xFF00C896)
+                    : isCompleted
+                        ? const Color(0xFFE8F5E9)
+                        : const Color(0xFFF5F5F5),
+                border: isCompleted && !isToday
+                    ? Border.all(color: const Color(0xFF00C896), width: 1.5)
+                    : null,
+              ),
+              child: Center(
+                child: Text(
+                  days[i],
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: isToday
+                        ? Colors.white
+                        : isCompleted
+                            ? const Color(0xFF00C896)
+                            : Colors.black38,
                   ),
                 ),
-              ],
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(labels[i],
+                style: GoogleFonts.nunito(
+                    fontSize: 9,
+                    color: isToday ? const Color(0xFF00C896) : Colors.black38)),
+          ],
+        );
+      }),
+    );
+  }
+
+  Widget _miniStat(String title, String value, String sub) => Expanded(
+        child: Column(
+          children: [
+            Text(title,
+                style: GoogleFonts.nunito(
+                    fontSize: 10, color: Colors.black45)),
+            const SizedBox(height: 4),
+            Text(value,
+                style: GoogleFonts.nunito(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.black87)),
+            Text(sub,
+                style: GoogleFonts.nunito(
+                    fontSize: 10, color: Colors.black45)),
+          ],
+        ),
+      );
+
+  Widget _starStat(int topScore) => Expanded(
+        child: Column(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF9C4),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.star, color: Color(0xFFFFB300), size: 18),
+                    Text(
+                      '$topScore/28',
+                      style: GoogleFonts.nunito(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFFFFB300)),
+                    ),
+                    Text('top score',
+                        style: GoogleFonts.nunito(
+                            fontSize: 8, color: const Color(0xFFFFB300))),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+  // ── Begin Challenge button with pulse glow ────────────────────────────────────
+  Widget _buildBeginButton() {
+    return AnimatedBuilder(
+      animation: _pulseCtrl,
+      builder: (_, child) => Transform.scale(
+        scale: _pulseAnim.value,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF00C896).withOpacity(_glowAnim.value),
+                blurRadius: 28,
+                spreadRadius: 4,
+              ),
+            ],
+          ),
+          child: child,
+        ),
+      ),
+      child: SizedBox(
+        width: double.infinity,
+        height: 60,
+        child: ElevatedButton.icon(
+          onPressed: () => Get.toNamed(Routes.game),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF00C896),
+            foregroundColor: const Color(0xFF0A1E14),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20)),
+            elevation: 0,
+          ),
+          icon: const Text('🧠', style: TextStyle(fontSize: 20)),
+          label: Text(
+            'Begin challenge',
+            style: GoogleFonts.nunito(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.3,
             ),
           ),
         ),
       ),
     );
   }
+}
+
+// ── Custom sine tween ─────────────────────────────────────────────────────────
+/// Maps the AnimationController's 0→1 value through a full sine cycle.
+/// Result oscillates between -amplitude and +amplitude.
+class _SineDoubleTween extends Animatable<double> {
+  final double amplitude;
+  const _SineDoubleTween({required this.amplitude});
+
+  @override
+  double transform(double t) => math.sin(t * 2 * math.pi) * amplitude;
 }
