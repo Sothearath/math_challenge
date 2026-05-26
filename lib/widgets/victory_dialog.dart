@@ -10,8 +10,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/constants.dart';
+import '../bindings/app_bindings.dart';
 import '../controllers/arithmetic_controller.dart';
 import '../models/level_config.dart';
+import '../views/arithmetic_challenge_view.dart';
 
 class VictoryDialog extends StatefulWidget {
   final int         xpGained;
@@ -221,12 +223,15 @@ class _VictoryDialogState extends State<VictoryDialog>
                       flex: 2,
                       child: ElevatedButton(
                         onPressed: () {
+                          // Single Get.back() closes the dialog only.
+                          // Get.off() replaces the game route underneath.
                           Get.back();
-                          // Force-delete the cached controller so GameBinding
-                          // (fenix: true) re-creates it fresh with the new
-                          // Get.arguments — onInit reruns, timer restarts.
                           Get.delete<ArithmeticController>(force: true);
-                          Get.toNamed(Routes.game, arguments: widget.nextLevel);
+                          Get.off(
+                                () => const ArithmeticChallengeView(),
+                            binding: GameBinding(),
+                            arguments: widget.nextLevel,
+                          );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF00C896),

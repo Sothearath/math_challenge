@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/game_controller.dart';
 import '../controllers/theme_controller.dart';
+import '../core/constants.dart';
 import '../models/question_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/chunky_button.dart';
@@ -23,10 +24,10 @@ class ResultView extends StatelessWidget {
 
       final isVs       = result.mode == GameMode.vsMachine;
       final playerWon  = isVs ? game.score.value >= game.machineScore.value : null;
-      final green      = isDark ? AppColors.neonGreen : AppColors.duoGreen;
+      final green      = isDark ? AppColors.mint : AppColors.cobalt;
 
       return Scaffold(
-        backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+        backgroundColor: isDark ? AppColors.darkBg : AppColors.gradientTop,
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -36,24 +37,24 @@ class ResultView extends StatelessWidget {
                 GestureDetector(
                   onTap: () => Get.offAllNamed('/'),
                   child: Icon(Icons.arrow_back_rounded,
-                    color: isDark ? Colors.white54 : Colors.black45),
+                      color: isDark ? Colors.white54 : AppColors.cobalt.withOpacity(0.5)),
                 ),
                 const SizedBox(height: 24),
 
                 // ── Headline ───────────────────────────────────────
                 Text(
                   isVs
-                    ? (playerWon! ? 'You Win! 🏆' : 'Machine Wins 🤖')
-                    : _headline(result.score),
+                      ? (playerWon! ? 'You Win! 🏆' : 'Machine Wins 🤖')
+                      : _headline(result.score),
                   style: TextStyle(
                     fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: -1,
-                    color: isDark ? Colors.white : Colors.black,
+                    color: isDark ? Colors.white : AppColors.cobalt,
                   ),
                 ),
                 Text(
                   isVs
-                    ? (playerWon! ? 'You outpaced the AI!' : 'The machine was faster.')
-                    : _subtitle(result.score),
+                      ? (playerWon! ? 'You outpaced the AI!' : 'The machine was faster.')
+                      : _subtitle(result.score),
                   style: TextStyle(
                     fontSize: 14,
                     color: isDark ? Colors.white54 : Colors.black45,
@@ -90,13 +91,13 @@ class ResultView extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(child: _StatCard(
-                      label: 'QPM', value: result.questionsPerMinute.toStringAsFixed(1),
-                      sub: 'questions/min', color: AppColors.skyBlue, isDark: isDark)),
+                        label: 'QPM', value: result.questionsPerMinute.toStringAsFixed(1),
+                        sub: 'questions/min', color: AppColors.gradientBottom, isDark: isDark)),
                     const SizedBox(width: 12),
                     Expanded(child: _StatCard(
-                      label: 'Accuracy', value: '${result.accuracy.toStringAsFixed(0)}%',
-                      sub: '${result.correctAnswers} of ${result.totalQuestions}',
-                      color: green, isDark: isDark)),
+                        label: 'Accuracy', value: '${result.accuracy.toStringAsFixed(0)}%',
+                        sub: '${result.correctAnswers} of ${result.totalQuestions}',
+                        color: green, isDark: isDark)),
                   ],
                 ),
 
@@ -115,7 +116,7 @@ class ResultView extends StatelessWidget {
                 ChunkyButton(
                   label: 'Play Again',
                   color: green,
-                  shadowColor: AppColors.duoGreenDark,
+                  shadowColor: AppColors.cobaltDark,
                   textColor: Colors.white,
                   onTap: () {
                     game.startGame();
@@ -125,8 +126,8 @@ class ResultView extends StatelessWidget {
                 const SizedBox(height: 10),
                 ChunkyButton(
                   label: 'Level Map',
-                  color: isDark ? AppColors.darkCard : AppColors.lightCard,
-                  shadowColor: isDark ? AppColors.darkBg : AppColors.lightBorder,
+                  color: isDark ? AppColors.darkCard : AppColors.keyWhite,
+                  shadowColor: isDark ? AppColors.darkBg : AppColors.cobaltShadow16,
                   textColor: isDark ? Colors.white : Colors.black87,
                   onTap: () => Get.offAllNamed('/'),
                 ),
@@ -158,7 +159,7 @@ class _StatCard extends StatelessWidget {
   final Color color;
   final bool isDark;
   const _StatCard({required this.label, required this.value, required this.sub,
-      required this.color, required this.isDark});
+    required this.color, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
@@ -171,12 +172,12 @@ class _StatCard extends StatelessWidget {
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
-          letterSpacing: 1.5, color: color)),
+            letterSpacing: 1.5, color: color)),
         const SizedBox(height: 6),
         Text(value, style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900,
-          color: isDark ? Colors.white : Colors.black, letterSpacing: -1)),
+            color: isDark ? Colors.white : AppColors.cobalt, letterSpacing: -1)),
         Text(sub, style: TextStyle(fontSize: 11,
-          color: isDark ? Colors.white38 : Colors.black38)),
+            color: isDark ? Colors.white38 : Colors.black38)),
       ]),
     );
   }
@@ -192,23 +193,23 @@ class _VsCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
+        color: isDark ? AppColors.darkCard : AppColors.keyWhite,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(children: [
         Expanded(child: Column(children: [
           Text('$playerScore', style: const TextStyle(fontSize: 32,
-            fontWeight: FontWeight.w900, color: AppColors.duoGreen, letterSpacing: -1)),
+              fontWeight: FontWeight.w900, color: AppColors.cobalt, letterSpacing: -1)),
           const Text('YOU', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
-            letterSpacing: 2, color: Colors.grey)),
+              letterSpacing: 2, color: Colors.grey)),
         ])),
         const Text('VS', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900,
-          color: Colors.grey)),
+            color: Colors.grey)),
         Expanded(child: Column(children: [
           Text('$machineScore', style: const TextStyle(fontSize: 32,
-            fontWeight: FontWeight.w900, color: AppColors.skyBlue, letterSpacing: -1)),
+              fontWeight: FontWeight.w900, color: AppColors.gradientBottom, letterSpacing: -1)),
           const Text('MACHINE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
-            letterSpacing: 2, color: Colors.grey)),
+              letterSpacing: 2, color: Colors.grey)),
         ])),
       ]),
     );

@@ -1,113 +1,60 @@
 // lib/features/game/views/arithmetic_challenge_view.dart
-//
-// Upgraded Challenge Screen View
-// New additions:
-//   • Smooth TweenAnimationBuilder progress bar
-//   • Floating labels (combo announce + speed bonus) — stack overlay
-//   • Combo border glow on answer field
-//   • Particle burst overlay on correct answer
-//   • Danger-state pulsing red hearts area
-//   • Victory / Defeat dialogs triggered by controller
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../controllers/arithmetic_controller.dart';
+import '../core/constants.dart';
 import '../painters/particle_burst_painter.dart';
+import '../theme/app_theme.dart';
 
-class ArithmeticChallengeView extends StatefulWidget {
+class ArithmeticChallengeView extends GetView<ArithmeticController> {
   const ArithmeticChallengeView({super.key});
 
   @override
-  State<ArithmeticChallengeView> createState() =>
-      _ArithmeticChallengeViewState();
-}
-
-class _ArithmeticChallengeViewState extends State<ArithmeticChallengeView>
-    with SingleTickerProviderStateMixin {
-
-  late final ArithmeticController _ctrl;
-
-  // Danger pulse animation (hearts area)
-  late final AnimationController _dangerCtrl;
-  late final Animation<double>   _dangerPulse;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = Get.find<ArithmeticController>();
-
-    // Register this vsync provider so the controller's Ticker can use it
-    // (if you follow the TickerProvider injection pattern)
-    try { Get.put<TickerProvider>(this, permanent: false); } catch (_) {}
-
-    _dangerCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 700),
-    );
-    _dangerPulse = Tween(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(parent: _dangerCtrl, curve: Curves.easeInOut));
-
-    // Watch danger state
-    ever(_ctrl.dangerState, (bool danger) {
-      if (danger) {
-        _dangerCtrl.repeat(reverse: true);
-      } else {
-        _dangerCtrl.stop();
-        _dangerCtrl.value = 0;
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _dangerCtrl.dispose();
-    super.dispose();
-  }
-
-  // ── Build ─────────────────────────────────────────────────────────────────────
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1B2A),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // ── Main column ──
-            Column(
-              children: [
-                _buildTopBar(),
-                _buildProgressBar(),
-                const SizedBox(height: 8),
-                _buildHeartsRow(),
-                const SizedBox(height: 10),
-                Expanded(child: _buildEquationCard()),
-                _buildAnswerField(),
-                const SizedBox(height: 8),
-                _buildNumpad(),
-                const SizedBox(height: 8),
-              ],
-            ),
+      // Gradient body — DecoratedBox wraps the entire safe area
+      body: Container(
+        decoration: AppTheme.gradientBackground,
+        child: SafeArea(
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  _buildTopBar(),
+                  _buildProgressBar(),
+                  const SizedBox(height: 6),
+                  _buildHeartsRow(),
+                  const SizedBox(height: 10),
+                  Expanded(child: _buildEquationCard()),
+                  _buildAnswerField(),
+                  const SizedBox(height: 10),
+                  _buildNumpad(),
+                  const SizedBox(height: 10),
+                ],
+              ),
 
-            // ── Floating label overlay ──
-            Obx(() {
-              final labels = _ctrl.floatingLabels.toList();
-              return IgnorePointer(
-                child: Stack(
-                  children: labels
-                      .map((l) => _FloatingLabelWidget(label: l))
-                      .toList(),
-                ),
-              );
-            }),
+              // Floating combo / speed-bonus labels
+              Obx(() {
+                final labels = controller.floatingLabels.toList();
+                return IgnorePointer(
+                  child: Stack(
+                    children: labels
+                        .map((l) => _FloatingLabelWidget(label: l))
+                        .toList(),
+                  ),
+                );
+              }),
 
-            // ── Particle burst overlay — re-keyed each tick ──
-            Obx(() {
-              final tick = _ctrl.particleBurstTick.value;
-              if (tick == 0) return const SizedBox.shrink();
-              return ParticleBurstOverlay(key: ValueKey(tick));
-            }),
-          ],
+              // Particle burst — re-keyed each correct answer
+              Obx(() {
+                final tick = controller.particleBurstTick.value;
+                if (tick == 0) return const SizedBox.shrink();
+                return ParticleBurstOverlay(key: ValueKey(tick));
+              }),
+            ],
+          ),
         ),
       ),
     );
@@ -116,35 +63,37 @@ class _ArithmeticChallengeViewState extends State<ArithmeticChallengeView>
   // ── Top bar ───────────────────────────────────────────────────────────────────
   Widget _buildTopBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
       child: Obx(() => Row(
         children: [
           // Quit button
-          _iconButton(
-              icon: Icons.close,
-              onTap: _ctrl.quitGame),
+          _iconButton(icon: Icons.close_rounded, onTap: controller.quitGame),
           const SizedBox(width: 8),
-          // Timer pill
+
+          // Timer pill — turns red below 10 s
           _pill(
             icon: Icons.timer_outlined,
-            label: '${_ctrl.timeLeft.value}s',
-            color: _ctrl.timeLeft.value < 10
-                ? const Color(0xFFFF5252)
-                : const Color(0xFF00C896),
+            label: '${controller.timeLeft.value}s',
+            color: controller.timeLeft.value < 10
+                ? AppColors.heartDanger
+                : AppColors.cobalt,
           ),
           const SizedBox(width: 8),
+
           // Level pill
           _pill(
-            icon: Icons.trending_up,
-            label: 'Level ${_ctrl.currentLevel.levelNumber}',
-            color: const Color(0xFF00C896),
+            icon: Icons.trending_up_rounded,
+            label: 'Level ${controller.currentLevel.levelNumber}',
+            color: AppColors.cobalt,
           ),
+
           const Spacer(),
-          // Score
+
+          // Score pill
           _pill(
-            icon: Icons.star,
-            label: '${_ctrl.score.value}',
-            color: const Color(0xFFFFB300),
+            icon: Icons.star_rounded,
+            label: '${controller.score.value}',
+            color: AppColors.sunflower,
           ),
         ],
       )),
@@ -152,41 +101,46 @@ class _ArithmeticChallengeViewState extends State<ArithmeticChallengeView>
   }
 
   Widget _iconButton(
-          {required IconData icon, required VoidCallback onTap}) =>
+      {required IconData icon, required VoidCallback onTap}) =>
       GestureDetector(
         onTap: onTap,
         child: Container(
-          width: 42,
-          height: 42,
+          width: 44,
+          height: 44,
           decoration: BoxDecoration(
-            color: const Color(0xFF1A2B3C),
-            borderRadius: BorderRadius.circular(14),
+            color: Colors.white.withOpacity(0.30),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+            border: Border.all(color: Colors.white.withOpacity(0.5)),
           ),
-          child: Icon(icon, color: Colors.white70, size: 20),
+          child: Icon(icon, color: AppColors.cobalt, size: 20),
         ),
       );
 
-  Widget _pill(
-          {required IconData icon,
-          required String label,
-          required Color color}) =>
+  Widget _pill({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) =>
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.4)),
+          color: Colors.white.withOpacity(0.28),
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+          border: Border.all(color: Colors.white.withOpacity(0.55)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, color: color, size: 14),
             const SizedBox(width: 4),
-            Text(label,
-                style: GoogleFonts.nunito(
-                    color: color,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800)),
+            Text(
+              label,
+              style: GoogleFonts.nunito(
+                color: color,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ],
         ),
       );
@@ -194,7 +148,7 @@ class _ArithmeticChallengeViewState extends State<ArithmeticChallengeView>
   // ── Progress bar ──────────────────────────────────────────────────────────────
   Widget _buildProgressBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -202,32 +156,52 @@ class _ArithmeticChallengeViewState extends State<ArithmeticChallengeView>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Level ${_ctrl.currentLevel.levelNumber} · ${_ctrl.currentLevel.label}',
+                'Level ${controller.currentLevel.levelNumber} · ${controller.currentLevel.label}',
                 style: GoogleFonts.nunito(
-                    fontSize: 11, color: Colors.white38),
+                  fontSize: 11,
+                  color: AppColors.mutedOnGrad,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               Text(
-                '${_ctrl.questionsAnswered.value} / ${_ctrl.currentLevel.questionsPerRound}',
+                '${controller.questionsAnswered.value} / ${controller.currentLevel.questionsPerRound}',
                 style: GoogleFonts.nunito(
-                    fontSize: 11,
-                    color: Colors.white38,
-                    fontWeight: FontWeight.w700),
+                  fontSize: 11,
+                  color: AppColors.mutedOnGrad,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ],
           )),
-          const SizedBox(height: 4),
-          // Smoothly animated progress bar
+          const SizedBox(height: 5),
+          // Smooth TweenAnimationBuilder slide
           Obx(() => TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: _ctrl.progressTarget.value),
+            tween: Tween(begin: 0, end: controller.progressTarget.value),
             duration: const Duration(milliseconds: 500),
             curve: Curves.easeOutCubic,
-            builder: (_, value, __) => ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: value,
-                minHeight: 6,
-                backgroundColor: const Color(0xFF1A2B3C),
-                valueColor: const AlwaysStoppedAnimation(Color(0xFF00C896)),
+            builder: (_, value, __) => Container(
+              height: 8,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.25),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: value,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppColors.sunflower, AppColors.sunflowerLight],
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.sunflower.withOpacity(0.5),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           )),
@@ -239,55 +213,49 @@ class _ArithmeticChallengeViewState extends State<ArithmeticChallengeView>
   // ── Hearts row ────────────────────────────────────────────────────────────────
   Widget _buildHeartsRow() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Obx(() {
-        final hearts = _ctrl.hearts.value;
-        final danger = _ctrl.dangerState.value;
+        final hearts = controller.hearts.value;
+        final danger = controller.dangerState.value;
 
         return Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Hearts
-            ...List.generate(
-              3,
-              (i) => AnimatedBuilder(
-                animation: _dangerPulse,
-                builder: (_, __) {
-                  final isActive = i < hearts;
-                  final scale    = (isActive && danger)
-                      ? 1.0 + _dangerPulse.value * 0.15
-                      : 1.0;
-                  return Transform.scale(
-                    scale: scale,
-                    child: Icon(
-                      Icons.favorite,
-                      size: 28,
-                      color: isActive
-                          ? (danger
-                              ? Color.lerp(
-                                  const Color(0xFFFF5252),
-                                  const Color(0xFFFF1744),
-                                  _dangerPulse.value)!
-                              : const Color(0xFFFF5252))
-                          : Colors.white10,
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 16),
-            // Streak counter
+            ...List.generate(3, (i) {
+              final isActive = i < hearts;
+              return TweenAnimationBuilder<double>(
+                tween: Tween(
+                    begin: 1.0, end: (isActive && danger) ? 1.18 : 1.0),
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                builder: (_, scale, __) => Transform.scale(
+                  scale: scale,
+                  child: Icon(
+                    Icons.favorite_rounded,
+                    size: 30,
+                    color: isActive
+                        ? (danger ? AppColors.heartDanger : AppColors.heartRed)
+                        : Colors.white.withOpacity(0.25),
+                  ),
+                ),
+              );
+            }),
+            const SizedBox(width: 14),
             Obx(() => Row(
               children: [
-                Text('Streak',
-                    style: GoogleFonts.nunito(
-                        fontSize: 12, color: Colors.white38)),
-                const SizedBox(width: 6),
-                Text('${_ctrl.streak.value} in a row',
-                    style: GoogleFonts.nunito(
-                        fontSize: 12,
-                        color: Colors.white54,
-                        fontWeight: FontWeight.w700)),
+                Text(
+                  'Streak ',
+                  style: GoogleFonts.nunito(
+                      fontSize: 12, color: AppColors.mutedOnGrad),
+                ),
+                Text(
+                  '${controller.streak.value} in a row',
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ],
             )),
           ],
@@ -299,40 +267,44 @@ class _ArithmeticChallengeViewState extends State<ArithmeticChallengeView>
   // ── Equation card ─────────────────────────────────────────────────────────────
   Widget _buildEquationCard() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: const Color(0xFF162033),
-          borderRadius: BorderRadius.circular(20),
+          color: AppColors.keyWhite,
+          borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+          boxShadow: AppTheme.cardShadows,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Tier badge
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFF00C896).withOpacity(0.15),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                    color: const Color(0xFF00C896).withOpacity(0.4)),
+                color: AppColors.cobalt.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(AppTheme.radiusBadge),
+                border: Border.all(color: AppColors.cobalt.withOpacity(0.25)),
               ),
               child: Text(
-                _ctrl.currentLevel.label,
+                controller.currentLevel.label,
                 style: GoogleFonts.nunito(
-                    fontSize: 12,
-                    color: const Color(0xFF00C896),
-                    fontWeight: FontWeight.w700),
+                  fontSize: 12,
+                  color: AppColors.cobalt,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
+
+            // Equation text in Cobalt Blue
             Obx(() => Text(
-              _ctrl.equation.value,
+              controller.equation.value,
               style: GoogleFonts.nunito(
-                fontSize: 44,
+                fontSize: 46,
                 fontWeight: FontWeight.w900,
-                color: Colors.white,
-                letterSpacing: 1,
+                color: AppColors.cobalt,
+                letterSpacing: 1.5,
               ),
             )),
           ],
@@ -344,49 +316,41 @@ class _ArithmeticChallengeViewState extends State<ArithmeticChallengeView>
   // ── Answer field ──────────────────────────────────────────────────────────────
   Widget _buildAnswerField() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
       child: Obx(() {
-        final comboActive = _ctrl.comboActive.value;
+        final comboActive = controller.comboActive.value;
+        final hasInput    = controller.userInput.value.isNotEmpty;
 
         return AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          height: 54,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          duration: const Duration(milliseconds: 250),
+          height: 58,
+          padding: const EdgeInsets.symmetric(horizontal: 18),
           decoration: BoxDecoration(
-            color: const Color(0xFF162033),
-            borderRadius: BorderRadius.circular(14),
+            color: AppColors.keyWhite,
+            borderRadius: BorderRadius.circular(AppTheme.radiusInput),
             border: Border.all(
               color: comboActive
-                  ? const Color(0xFF00E676)
-                  : Colors.white12,
-              width: comboActive ? 2.0 : 1.0,
+                  ? AppColors.correctGreen
+                  : AppColors.cobalt.withOpacity(0.20),
+              width: comboActive ? 2.5 : 1.5,
             ),
             boxShadow: comboActive
-                ? [
-                    BoxShadow(
-                      color: const Color(0xFF00E676).withOpacity(0.3),
-                      blurRadius: 16,
-                      spreadRadius: 2,
-                    )
-                  ]
-                : null,
+                ? AppTheme.correctGlow
+                : AppTheme.cardShadows,
           ),
           child: Row(
             children: [
-              // Blinking cursor
-              _BlinkingCursor(),
-              const SizedBox(width: 4),
+              const _BlinkingCursor(),
+              const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  _ctrl.userInput.value.isEmpty
-                      ? 'Type your answer'
-                      : _ctrl.userInput.value,
+                  hasInput ? controller.userInput.value : 'Type your answer',
                   style: GoogleFonts.nunito(
-                    fontSize: 18,
-                    color: _ctrl.userInput.value.isEmpty
-                        ? Colors.white24
-                        : Colors.white,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: hasInput
+                        ? AppColors.cobalt
+                        : AppColors.cobalt.withOpacity(0.30),
                   ),
                 ),
               ),
@@ -406,27 +370,27 @@ class _ArithmeticChallengeViewState extends State<ArithmeticChallengeView>
     ];
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Column(
         children: [
           ...rows.map(
-            (row) => Padding(
+                (row) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
-                children: row
-                    .map((k) => Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: _NumKey(
-                                label: k,
-                                onTap: () => _ctrl.onKeyTap(k)),
-                          ),
-                        ))
-                    .toList(),
+                children: row.map((k) => Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: _NumKey(
+                      label: k,
+                      onTap: () => controller.onKeyTap(k),
+                    ),
+                  ),
+                )).toList(),
               ),
             ),
           ),
-          // Bottom row: delete | 0 | submit
+
+          // Bottom row: ⌫ | 0 | ✓
           Row(
             children: [
               Expanded(
@@ -435,7 +399,7 @@ class _ArithmeticChallengeViewState extends State<ArithmeticChallengeView>
                   child: _NumKey(
                     label: '⌫',
                     isDelete: true,
-                    onTap: () => _ctrl.onKeyTap('backspace'),
+                    onTap: () => controller.onKeyTap('backspace'),
                   ),
                 ),
               ),
@@ -443,14 +407,15 @@ class _ArithmeticChallengeViewState extends State<ArithmeticChallengeView>
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: _NumKey(
-                      label: '0', onTap: () => _ctrl.onKeyTap('0')),
+                    label: '0',
+                    onTap: () => controller.onKeyTap('0'),
+                  ),
                 ),
               ),
-              // Submit button wrapped in particle-burst stack
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: _SubmitKey(onTap: _ctrl.onSubmit),
+                  child: _SubmitKey(onTap: controller.onSubmit),
                 ),
               ),
             ],
@@ -461,7 +426,7 @@ class _ArithmeticChallengeViewState extends State<ArithmeticChallengeView>
   }
 }
 
-// ── Number key widget ─────────────────────────────────────────────────────────
+// ── Number key ────────────────────────────────────────────────────────────────
 class _NumKey extends StatefulWidget {
   final String label;
   final VoidCallback onTap;
@@ -479,52 +444,80 @@ class _NumKey extends StatefulWidget {
 
 class _NumKeyState extends State<_NumKey>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
+  late final AnimationController _anim;
   late final Animation<double>   _scale;
+
+  // Track pressed state for sunflower pulse background
+  bool _pressed = false;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 100));
-    _scale = Tween(begin: 1.0, end: 0.88).animate(
-        CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    _anim = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 90));
+    _scale = Tween(begin: 1.0, end: 0.87)
+        .animate(CurvedAnimation(parent: _anim, curve: Curves.easeInOut));
   }
 
   @override
   void dispose() {
-    _ctrl.dispose();
+    _anim.dispose();
     super.dispose();
+  }
+
+  void _onDown(_) {
+    setState(() => _pressed = true);
+    _anim.forward();
+  }
+
+  void _onUp(_) {
+    setState(() => _pressed = false);
+    _anim.reverse();
+    widget.onTap();
+  }
+
+  void _onCancel() {
+    setState(() => _pressed = false);
+    _anim.reverse();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Sunflower pulse on press; delete key gets a rose tint
+    final bg = widget.isDelete
+        ? (_pressed
+        ? AppColors.heartRed.withOpacity(0.10)
+        : AppColors.keyWhite)
+        : (_pressed
+        ? AppColors.sunflower.withOpacity(0.18)
+        : AppColors.keyWhite);
+
+    final textColor = widget.isDelete ? AppColors.heartDanger : AppColors.cobalt;
+
     return GestureDetector(
-      onTapDown: (_) => _ctrl.forward(),
-      onTapUp: (_) {
-        _ctrl.reverse();
-        widget.onTap();
-      },
-      onTapCancel: () => _ctrl.reverse(),
+      onTapDown:  _onDown,
+      onTapUp:    _onUp,
+      onTapCancel: _onCancel,
       child: ScaleTransition(
         scale: _scale,
-        child: Container(
-          height: 76,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          height: 72,
           decoration: BoxDecoration(
-            color: widget.isDelete
-                ? const Color(0xFF3B1A1A)
-                : const Color(0xFF1A2B3C),
-            borderRadius: BorderRadius.circular(16),
+            color: bg,
+            borderRadius: BorderRadius.circular(AppTheme.radiusKey),
+            boxShadow: _pressed ? [] : AppTheme.keyShadows,
+            border: _pressed
+                ? Border.all(color: AppColors.sunflower, width: 2.0)
+                : Border.all(color: Colors.transparent),
           ),
           child: Center(
             child: Text(
               widget.label,
               style: GoogleFonts.nunito(
-                fontSize: widget.label.length > 1 ? 18 : 24,
-                fontWeight: FontWeight.w700,
-                color: widget.isDelete
-                    ? const Color(0xFFFF5252)
-                    : Colors.white,
+                fontSize: widget.label.length > 1 ? 20 : 26,
+                fontWeight: FontWeight.w900,
+                color: textColor,
               ),
             ),
           ),
@@ -545,43 +538,57 @@ class _SubmitKey extends StatefulWidget {
 
 class _SubmitKeyState extends State<_SubmitKey>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
+  late final AnimationController _anim;
   late final Animation<double>   _scale;
+  bool _pressed = false;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 100));
-    _scale = Tween(begin: 1.0, end: 0.88)
-        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    _anim = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 90));
+    _scale = Tween(begin: 1.0, end: 0.87)
+        .animate(CurvedAnimation(parent: _anim, curve: Curves.easeInOut));
   }
 
   @override
   void dispose() {
-    _ctrl.dispose();
+    _anim.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: (_) => _ctrl.forward(),
-      onTapUp: (_) {
-        _ctrl.reverse();
-        widget.onTap();
-      },
-      onTapCancel: () => _ctrl.reverse(),
+      onTapDown:   (_) { setState(() => _pressed = true);  _anim.forward(); },
+      onTapUp:     (_) { setState(() => _pressed = false); _anim.reverse(); widget.onTap(); },
+      onTapCancel: ()  { setState(() => _pressed = false); _anim.reverse(); },
       child: ScaleTransition(
         scale: _scale,
-        child: Container(
-          height: 76,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          height: 72,
           decoration: BoxDecoration(
-            color: const Color(0xFF00C896),
-            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: _pressed
+                  ? [AppColors.cobalt, AppColors.cobaltDark]
+                  : [AppColors.cobalt, AppColors.cobaltLight],
+            ),
+            borderRadius: BorderRadius.circular(AppTheme.radiusKey),
+            boxShadow: _pressed
+                ? []
+                : [
+              BoxShadow(
+                color: AppColors.cobalt.withOpacity(0.45),
+                blurRadius: 12,
+                offset: const Offset(0, 5),
+              ),
+            ],
           ),
           child: const Center(
-            child: Icon(Icons.check_rounded, color: Colors.white, size: 30),
+            child: Icon(Icons.check_rounded, color: Colors.white, size: 32),
           ),
         ),
       ),
@@ -591,18 +598,20 @@ class _SubmitKeyState extends State<_SubmitKey>
 
 // ── Blinking cursor ───────────────────────────────────────────────────────────
 class _BlinkingCursor extends StatefulWidget {
+  const _BlinkingCursor();
+
   @override
   State<_BlinkingCursor> createState() => _BlinkingCursorState();
 }
 
 class _BlinkingCursorState extends State<_BlinkingCursor>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
+  late final AnimationController _anim;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
+    _anim = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
     )..repeat(reverse: true);
@@ -610,25 +619,27 @@ class _BlinkingCursorState extends State<_BlinkingCursor>
 
   @override
   void dispose() {
-    _ctrl.dispose();
+    _anim.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return FadeTransition(
-      opacity: _ctrl,
+      opacity: _anim,
       child: Container(
-        width: 2,
-        height: 20,
-        color: const Color(0xFF00C896),
+        width: 2.5,
+        height: 22,
+        decoration: BoxDecoration(
+          color: AppColors.cobalt,
+          borderRadius: BorderRadius.circular(2),
+        ),
       ),
     );
   }
 }
 
-// ── Floating label widget ─────────────────────────────────────────────────────
-/// Animates upward and fades out, positioned in the centre of the screen.
+// ── Floating label ────────────────────────────────────────────────────────────
 class _FloatingLabelWidget extends StatefulWidget {
   final FloatingLabel label;
   const _FloatingLabelWidget({required this.label});
@@ -639,40 +650,37 @@ class _FloatingLabelWidget extends StatefulWidget {
 
 class _FloatingLabelWidgetState extends State<_FloatingLabelWidget>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
+  late final AnimationController _anim;
   late final Animation<double>   _offset;
   late final Animation<double>   _fade;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
+    _anim = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     )..forward();
-
     _offset = Tween(begin: 0.0, end: -80.0)
-        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
-    _fade   = Tween(begin: 1.0, end: 0.0)
-        .animate(CurvedAnimation(
-            parent: _ctrl, curve: const Interval(0.55, 1.0)));
+        .animate(CurvedAnimation(parent: _anim, curve: Curves.easeOut));
+    _fade = Tween(begin: 1.0, end: 0.0).animate(
+        CurvedAnimation(parent: _anim, curve: const Interval(0.55, 1.0)));
   }
 
   @override
   void dispose() {
-    _ctrl.dispose();
+    _anim.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      // Horizontally centred, vertically placed above the numpad
       left: 0,
       right: 0,
       bottom: 180,
       child: AnimatedBuilder(
-        animation: _ctrl,
+        animation: _anim,
         builder: (_, child) => Transform.translate(
           offset: Offset(0, _offset.value),
           child: Opacity(opacity: _fade.value, child: child),
@@ -680,12 +688,17 @@ class _FloatingLabelWidgetState extends State<_FloatingLabelWidget>
         child: Center(
           child: Container(
             padding:
-                const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             decoration: BoxDecoration(
               color: widget.label.color.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(20),
-              border:
-                  Border.all(color: widget.label.color.withOpacity(0.5)),
+              borderRadius: BorderRadius.circular(AppTheme.radiusBadge),
+              border: Border.all(color: widget.label.color.withOpacity(0.55)),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.label.color.withOpacity(0.20),
+                  blurRadius: 12,
+                ),
+              ],
             ),
             child: Text(
               widget.label.text,

@@ -11,8 +11,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/constants.dart';
+import '../bindings/app_bindings.dart';
 import '../controllers/arithmetic_controller.dart';
 import '../models/level_config.dart';
+import '../views/arithmetic_challenge_view.dart';
 
 class DefeatDialog extends StatefulWidget {
   final LevelConfig currentLevel;
@@ -153,10 +155,12 @@ class _DefeatDialogState extends State<DefeatDialog>
                     child: ElevatedButton(
                       onPressed: () {
                         Get.back();
-                        // Delete stale controller so GameBinding creates a
-                        // fresh one — same fix as the Victory dialog.
                         Get.delete<ArithmeticController>(force: true);
-                        Get.toNamed(Routes.game, arguments: widget.currentLevel);
+                        Get.off(
+                              () => const ArithmeticChallengeView(),
+                          binding: GameBinding(),
+                          arguments: widget.currentLevel,
+                        );
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFFF5252),

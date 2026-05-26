@@ -7,8 +7,6 @@ import 'package:get/get.dart';
 import '../controllers/arithmetic_controller.dart';
 import '../controllers/daily_challenge_controller.dart';
 import '../controllers/dashboard_controller.dart';
-import '../controllers/game_controller.dart';
-import '../controllers/game_map_controller.dart';
 import '../controllers/theme_controller.dart';
 import '../controllers/streak_controller.dart';
 import '../controllers/awards_controller.dart';

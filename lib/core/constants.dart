@@ -76,48 +76,134 @@ abstract class StorageKeys {
 abstract class AppColors {
   AppColors._();
 
-  // ── Dark surfaces (dashboard scaffold) ───────────────────────────────────
-  static const darkBg       = Color(0xFF0D1F18);  // deepest bg
-  static const darkCard     = Color(0xFF142B20);  // stat bar, bubble
-  static const darkCard2    = Color(0xFF1C3528);  // slightly lighter card
-  static const darkDivider  = Color(0xFF1F3D2C);  // borders on dark
+  // ── A. Dark surfaces (dashboard scaffold) ─────────────────────────────────
+  static const darkBg        = Color(0xFF0D1F18);
+  static const darkCard      = Color(0xFF142B20);
+  static const darkCard2     = Color(0xFF1C3528);
+  static const darkDivider   = Color(0xFF1F3D2C);
 
-  // ── Mint accent ───────────────────────────────────────────────────────────
-  static const mint         = Color(0xFF2ED1A2);  // CTA, accents, day dots
-  static const mintDark     = Color(0xFF1BAC84);  // pressed / shadow state
-  static const mintGlow     = Color(0xFF6BEDD0);  // highlight lobe on Brainy
-  static const mintText     = Color(0xFF0A3D28);  // text ON mint surfaces
-  static const mintDim      = Color(0xFF9EC4B0);  // muted text on dark bg
-  static const mintFaint    = Color(0xFF4D7A62);  // very muted label text
+  // ── B. Mint accent (dashboard CTA, progress, Brainy) ─────────────────────
+  static const mint          = Color(0xFF2ED1A2);
+  static const mintDark      = Color(0xFF1BAC84);
+  static const mintGlow      = Color(0xFF6BEDD0);
+  static const mintText      = Color(0xFF0A3D28);
+  static const mintDim       = Color(0xFF9EC4B0);
+  static const mintFaint     = Color(0xFF4D7A62);
 
-  // ── Light surfaces (activity card, awards) ────────────────────────────────
-  static const lightBg      = Color(0xFFF5F7F5);
-  static const lightCard    = Colors.white;
-  static const lightDivider = Color(0xFFF0F0F0);
+  // ── C. Light surfaces (activity card, awards, dashboard card) ─────────────
+  static const lightBg       = Color(0xFFF5F7F5);
+  static const lightCard     = Colors.white;
+  static const lightDivider  = Color(0xFFF0F0F0);
 
-  // ── Semantic ──────────────────────────────────────────────────────────────
-  static const heartRed     = Color(0xFFEF4444);  // hearts / lives
-  static const streakGreen  = Color(0xFF0F5E42);  // streak badge text
-  static const streakBg     = Color(0xFFD4F2E7);  // streak badge background
-  static const goldTrophy   = Color(0xFFFFD700);  // earned trophy
-  static const starAmber    = Color(0xFFEF9F27);  // star icon in badge
-  static const starBg       = Color(0xFFFFF8E6);  // star badge background
-  static const starText     = Color(0xFF7A4F08);  // star badge numeral
-  static const starLabel    = Color(0xFFB47A15);  // star badge label
-  static const errorRed     = Color(0xFFDC2626);
+  // ── D. Playful Citrus & Sky (game screen palette) ─────────────────────────
 
-  // ── Text on white activity card ───────────────────────────────────────────
-  static const cardTitle    = Color(0xFF111111);
-  static const badgeBg      = Color(0xFFF5F6F5);
-  static const badgeLabel   = Color(0xFF999999);
-  static const badgeNum     = Color(0xFF111111);
-  static const badgeSub     = Color(0xFFBBBBBB);
+  /// Brainy Yellow — stars, milestones, numpad press-pulse, XP counter.
+  static const sunflower     = Color(0xFFFFB61D);
 
-  // ── Day dot states ─────────────────────────────────────────────────────────
-  static const dotDoneBg    = Color(0xFF111E17);  // completed day
-  static const dotMissBorder = Color(0xFFDDEEDD); // future/missed border
-  static const dotMissText  = Color(0xFFBBCCBB);  // future/missed text
-  static const dotDayLabel  = Color(0xFFAAAAAA);  // Mon / Tue label
+  /// Sunflower highlight — lighter end of the progress-bar gradient.
+  static const sunflowerLight = Color(0xFFFFD55A);
+
+  /// Cobalt Blue — equation text, numpad digits, submit button, titles.
+  static const cobalt        = Color(0xFF2A65A9);
+
+  /// Cobalt light — lighter end of the submit-button gradient.
+  static const cobaltLight   = Color(0xFF3578C8);
+
+  /// Cobalt dark — pressed state of the submit button.
+  static const cobaltDark    = Color(0xFF1A4E8A);
+
+  /// Aqua Teal — top of the game-screen background gradient.
+  static const gradientTop   = Color(0xFF6AD7C5);
+
+  /// Soft Sky Blue — bottom of the game-screen background gradient.
+  static const gradientBottom = Color(0xFF68B2F4);
+
+  /// Deeper Sky Blue — pressed/shadow state of gradientBottom,
+  /// also used as the VS Machine button shadow.
+  static const gradientBottomDark = Color(0xFF4A90D9);
+
+  /// Crisp white — numpad key surface, equation card, answer field.
+  static const keyWhite      = Color(0xFFFFFFFF);
+
+  /// Correct green — combo-active border glow on the answer field.
+  static const correctGreen  = Color(0xFF34C759);
+
+  // ── E. Semantic / shared ──────────────────────────────────────────────────
+  static const heartRed      = Color(0xFFEF4444);
+  static const heartDanger   = Color(0xFFFF3B30);  // 1-heart pulse
+  static const streakGreen   = Color(0xFF0F5E42);
+  static const streakBg      = Color(0xFFD4F2E7);
+  static const goldTrophy    = Color(0xFFFFD700);
+  static const starAmber     = Color(0xFFEF9F27);
+  static const starBg        = Color(0xFFFFF8E6);
+  static const starText      = Color(0xFF7A4F08);
+  static const starLabel     = Color(0xFFB47A15);
+  static const errorRed      = Color(0xFFDC2626);
+
+  // ── F. Text & card surfaces ───────────────────────────────────────────────
+  static const cardTitle     = Color(0xFF111111);
+  static const badgeBg       = Color(0xFFF5F6F5);
+  static const badgeLabel    = Color(0xFF999999);
+  static const badgeNum      = Color(0xFF111111);
+  static const badgeSub      = Color(0xFFBBBBBB);
+
+  // ── G. Day dot states ─────────────────────────────────────────────────────
+  static const dotDoneBg     = Color(0xFF111E17);
+  static const dotMissBorder = Color(0xFFDDEEDD);
+  static const dotMissText   = Color(0xFFBBCCBB);
+  static const dotDayLabel   = Color(0xFFAAAAAA);
+
+  // ── H. Shadows (pre-computed with opacity for BoxShadow) ──────────────────
+  /// Cobalt @ 16% — card drop shadow.
+  static const cobaltShadow16 = Color(0x292A65A9);
+
+  /// Cobalt @ 18% — numpad key drop shadow.
+  static const cobaltShadow18 = Color(0x2E2A65A9);
+
+  /// Cobalt @ 40% — submit button drop shadow.
+  static const cobaltShadow40 = Color(0x662A65A9);
+
+  /// Sunflower @ 45% — progress bar glow.
+  static const sunflowerGlow45 = Color(0x73FFB61D);
+
+  /// Correct green @ 40% — combo answer-field glow.
+  static const correctGlow40  = Color(0x6634C759);
+
+  /// Mint @ 30% — dashboard CTA glow.
+  static const mintGlow30     = Color(0x4D2ED1A2);
+
+  // ── I. On-gradient text ───────────────────────────────────────────────────
+
+  /// White @ 75% — muted labels on the Aqua→Sky gradient background
+  /// (progress bar labels, streak row, pill sub-text).
+  static const mutedOnGrad    = Color(0xBFFFFFFF);
+
+  // ── J. Level-map node palette ─────────────────────────────────────────────
+  // Each GameLevel cycles through this list by index.
+  // levelColors     — face/fill colour of the stage node.
+  // levelColorsDark — shadow/border colour of the stage node.
+
+  static const List<Color> levelColors = [
+    Color(0xFF2A65A9), // cobalt        — Level 1
+    Color(0xFF00C896), // mint-green    — Level 2
+    Color(0xFFFFB61D), // sunflower     — Level 3
+    Color(0xFFFF6B6B), // coral         — Level 4
+    Color(0xFF9C6FDE), // violet        — Level 5
+    Color(0xFF34C759), // correct-green — Level 6
+    Color(0xFF6AD7C5), // aqua teal     — Level 7
+    Color(0xFFFF9500), // orange        — Level 8
+  ];
+
+  static const List<Color> levelColorsDark = [
+    Color(0xFF1A4E8A), // cobalt dark
+    Color(0xFF1BAC84), // mint dark
+    Color(0xFFCC8E00), // sunflower dark
+    Color(0xFFCC3333), // coral dark
+    Color(0xFF7A50B8), // violet dark
+    Color(0xFF1E8A3A), // green dark
+    Color(0xFF3DB5A5), // teal dark
+    Color(0xFFCC6A00), // orange dark
+  ];
 }
 
 // ─── Dashboard stat labels ─────────────────────────────────────────────────────

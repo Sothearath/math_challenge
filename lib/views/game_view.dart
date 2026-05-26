@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/game_controller.dart';
 import '../controllers/theme_controller.dart';
+import '../core/constants.dart';
 import '../models/question_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/numeric_keypad.dart';
@@ -20,7 +21,7 @@ class GameView extends StatelessWidget {
       final isDark = themeCtrl.isDarkMode;
 
       return Scaffold(
-        backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+        backgroundColor: isDark ? AppColors.darkBg : AppColors.gradientTop,
         body: Stack(
           children: [
             // ── Main game content ──────────────────────────────────────
@@ -36,7 +37,7 @@ class GameView extends StatelessWidget {
                       duration: const Duration(milliseconds: 200),
                       opacity: game.isCorrect.value ? 1 : 0,
                       child: Container(
-                        color: AppColors.correct.withOpacity(0.08),
+                        color: AppColors.correctGreen.withOpacity(0.08),
                       ),
                     ),
                   ),
@@ -45,7 +46,7 @@ class GameView extends StatelessWidget {
               if (game.isWrong.value) {
                 return Positioned.fill(
                   child: IgnorePointer(
-                    child: Container(color: AppColors.wrong.withOpacity(0.08)),
+                    child: Container(color: AppColors.heartDanger.withOpacity(0.08)),
                   ),
                 );
               }
@@ -128,9 +129,9 @@ class _Header extends StatelessWidget {
           child: Container(
             width: 40, height: 40,
             decoration: BoxDecoration(
-              color: isDark ? AppColors.darkCard : AppColors.lightCard,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+              color: isDark ? AppColors.darkCard : Colors.white.withOpacity(0.30),
+              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+              border: Border.all(color: isDark ? AppColors.darkDivider : Colors.white.withOpacity(0.5)),
             ),
             child: Icon(Icons.close_rounded,
                 color: isDark ? Colors.white54 : Colors.black45, size: 20),
@@ -140,9 +141,9 @@ class _Header extends StatelessWidget {
         // Timer
         Obx(() {
           final pct = game.timeLeft.value / GameController.gameDuration;
-          final col = pct > 0.4 ? (isDark ? AppColors.neonGreen : AppColors.duoGreen)
-              : pct > 0.2 ? AppColors.neonOrange
-              :             AppColors.heartRed;
+          final col = pct > 0.4 ? (isDark ? AppColors.mint : AppColors.cobalt)
+              : pct > 0.2 ? AppColors.sunflower
+              :             AppColors.heartDanger;
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
@@ -166,9 +167,9 @@ class _Header extends StatelessWidget {
         Obx(() => Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: isDark ? AppColors.darkCard : AppColors.lightCard,
+            color: isDark ? AppColors.darkCard : AppColors.keyWhite,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+            border: Border.all(color: isDark ? AppColors.darkDivider : AppColors.cobaltShadow16),
           ),
           child: Row(
             children: [
@@ -177,7 +178,7 @@ class _Header extends StatelessWidget {
               Text('${game.score.value}',
                   style: TextStyle(
                     fontSize: 16, fontWeight: FontWeight.w800,
-                    color: isDark ? Colors.white : Colors.black,
+                    color: isDark ? Colors.white : AppColors.cobalt,
                   )),
             ],
           ),
@@ -196,7 +197,7 @@ class _ProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final green = isDark ? AppColors.neonGreen : AppColors.duoGreen;
+    final green = isDark ? AppColors.mint : AppColors.cobalt;
 
     return Obx(() {
       final pct     = game.progressPct.value;
@@ -225,10 +226,10 @@ class _ProgressBar extends StatelessWidget {
                   height: 14,
                   width: w,
                   decoration: BoxDecoration(
-                    color: isDark ? AppColors.darkCard : AppColors.lightCard,
+                    color: isDark ? AppColors.darkCard : AppColors.keyWhite,
                     borderRadius: BorderRadius.circular(7),
                     border: Border.all(
-                        color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                        color: isDark ? AppColors.darkDivider : AppColors.cobaltShadow16),
                   ),
                 ),
                 // Fill
@@ -238,7 +239,7 @@ class _ProgressBar extends StatelessWidget {
                   height: 14,
                   width: (w * pct).clamp(0, w),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [green, green.withOpacity(0.75)]),
+                    gradient: LinearGradient(colors: [isDark ? green : AppColors.sunflower, (isDark ? green : AppColors.sunflower).withOpacity(0.75)]),
                     borderRadius: BorderRadius.circular(7),
                     // Always keep one shadow entry so Flutter can lerp without
                     // producing a negative blur radius during the transition.
@@ -321,10 +322,10 @@ class _VsBar extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('YOU  ${game.score.value}',
-                    style: const TextStyle(color: AppColors.duoGreen,
+                    style: const TextStyle(color: AppColors.cobalt,
                         fontSize: 11, fontWeight: FontWeight.w800)),
                 Text('${game.machineScore.value}  AI',
-                    style: const TextStyle(color: AppColors.skyBlue,
+                    style: const TextStyle(color: AppColors.gradientBottom,
                         fontSize: 11, fontWeight: FontWeight.w800)),
               ],
             ),
@@ -336,12 +337,12 @@ class _VsBar extends StatelessWidget {
                 return SizedBox(
                   height: 8,
                   child: Stack(children: [
-                    Container(width: w, color: AppColors.skyBlue),
+                    Container(width: w, color: AppColors.gradientBottom),
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 400),
                       curve: Curves.easeOut,
                       width: w * playerPct,
-                      color: isDark ? AppColors.neonGreen : AppColors.duoGreen,
+                      color: isDark ? AppColors.mint : AppColors.cobalt,
                     ),
                   ]),
                 );
@@ -366,11 +367,11 @@ class _EquationCard extends StatelessWidget {
     return Obx(() {
       Color borderColor;
       if (game.isCorrect.value) {
-        borderColor = AppColors.correct;
+        borderColor = AppColors.correctGreen;
       } else if (game.isWrong.value) {
-        borderColor = AppColors.wrong;
+        borderColor = AppColors.heartDanger;
       } else {
-        borderColor = isDark ? AppColors.darkBorder : AppColors.lightBorder;
+        borderColor = isDark ? AppColors.darkDivider : AppColors.cobalt.withOpacity(0.20);
       }
 
       return AnimatedContainer(
@@ -394,7 +395,7 @@ class _EquationCard extends StatelessWidget {
                 game.currentQuestion.value!.displayString,
                 style: TextStyle(
                   fontSize: 44, fontWeight: FontWeight.w900,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: isDark ? Colors.white : AppColors.cobalt,
                   letterSpacing: -1,
                 ),
                 textAlign: TextAlign.center,
@@ -407,14 +408,14 @@ class _EquationCard extends StatelessWidget {
                 _Chip(
                   icon: Icons.check_circle_rounded,
                   label: '${game.correctAnswers.value} correct',
-                  color: AppColors.correct,
+                  color: AppColors.correctGreen,
                 ),
                 const SizedBox(width: 8),
                 if (game.consecutiveCorrect.value >= 2)
                   _Chip(
                     icon: Icons.local_fire_department_rounded,
                     label: '${game.consecutiveCorrect.value} streak',
-                    color: AppColors.neonOrange,
+                    color: AppColors.heartDanger,
                   ),
               ],
             ),
@@ -463,9 +464,9 @@ class _AnswerDisplay extends StatelessWidget {
   Widget build(BuildContext context) {
     return Obx(() {
       Color accent;
-      if (game.isCorrect.value) accent = AppColors.correct;
-      else if (game.isWrong.value) accent = AppColors.wrong;
-      else accent = isDark ? AppColors.neonBlue : AppColors.skyBlue;
+      if (game.isCorrect.value) accent = AppColors.correctGreen;
+      else if (game.isWrong.value) accent = AppColors.heartDanger;
+      else accent = isDark ? AppColors.cobalt : AppColors.cobalt;
 
       return AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -514,7 +515,7 @@ class _MascotToast extends StatelessWidget {
             color: isDark ? AppColors.darkCard : Colors.white,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-                color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                color: isDark ? AppColors.darkDivider : AppColors.cobaltShadow16),
             boxShadow: [
               BoxShadow(color: Colors.black.withOpacity(0.15),
                   blurRadius: 16, offset: const Offset(0, 6)),
@@ -526,7 +527,7 @@ class _MascotToast extends StatelessWidget {
               Container(
                 width: 40, height: 40,
                 decoration: BoxDecoration(
-                  color: (isDark ? AppColors.neonGreen : AppColors.duoGreen).withOpacity(0.15),
+                  color: (isDark ? AppColors.mint : AppColors.cobalt).withOpacity(0.15),
                   shape: BoxShape.circle,
                 ),
                 child: const Center(child: Text('🦉', style: TextStyle(fontSize: 22))),
@@ -557,7 +558,7 @@ class _SuccessOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final result = game.gameResult.value;
-    final green  = isDark ? AppColors.neonGreen : AppColors.duoGreen;
+    final green  = isDark ? AppColors.mint : AppColors.cobalt;
 
     return Positioned.fill(
       child: Container(
@@ -567,7 +568,7 @@ class _SuccessOverlay extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: 32),
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurface : Colors.white,
+              color: isDark ? AppColors.darkCard : Colors.white,
               borderRadius: BorderRadius.circular(32),
               border: Border.all(color: green.withOpacity(0.4), width: 2),
               boxShadow: [
@@ -583,7 +584,7 @@ class _SuccessOverlay extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text('Level Complete!', style: TextStyle(
                   fontSize: 28, fontWeight: FontWeight.w900,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: isDark ? Colors.white : AppColors.cobalt,
                 )),
                 const SizedBox(height: 8),
                 Text('Incredible work! 🎉', style: TextStyle(
@@ -595,7 +596,7 @@ class _SuccessOverlay extends StatelessWidget {
                   children: [
                     _OverlayStat(
                         label: 'Score', value: '${result?.score ?? 0}',
-                        color: AppColors.goldStar),
+                        color: AppColors.sunflower),
                     _OverlayStat(
                         label: 'Accuracy',
                         value: '${result?.accuracy.toStringAsFixed(0) ?? 0}%',
@@ -603,7 +604,7 @@ class _SuccessOverlay extends StatelessWidget {
                     _OverlayStat(
                         label: 'Correct',
                         value: '${result?.correctAnswers ?? 0}',
-                        color: AppColors.skyBlue),
+                        color: AppColors.gradientBottom),
                   ],
                 ),
                 const SizedBox(height: 28),
@@ -612,7 +613,7 @@ class _SuccessOverlay extends StatelessWidget {
                   child: _ChunkyOverlayButton(
                     label: 'Continue',
                     color: green,
-                    shadowColor: isDark ? AppColors.duoGreenDark : AppColors.duoGreenDark,
+                    shadowColor: isDark ? AppColors.cobaltDark : AppColors.cobaltDark,
                     onTap: game.dismissSuccessOverlay,
                   ),
                 ),

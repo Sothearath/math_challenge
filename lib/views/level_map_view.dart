@@ -6,8 +6,8 @@ import 'package:get/get.dart';
 import '../controllers/game_controller.dart';
 import '../controllers/streak_controller.dart';
 import '../controllers/theme_controller.dart';
+import '../core/constants.dart';
 import '../models/question_model.dart';
-import '../theme/app_theme.dart';
 import '../widgets/chunky_button.dart';
 
 class LevelMapView extends StatelessWidget {
@@ -20,8 +20,8 @@ class LevelMapView extends StatelessWidget {
 
     return Obx(() {
       final isDark  = themeCtrl.isDarkMode;
-      final bg      = isDark ? AppColors.darkBg     : AppColors.lightBg;
-      final surface = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+      final bg      = isDark ? AppColors.darkBg     : AppColors.gradientTop;
+      final surface = isDark ? AppColors.darkCard : Colors.white.withOpacity(0.85);
 
       return Scaffold(
         backgroundColor: bg,
@@ -75,7 +75,7 @@ class _TopBar extends StatelessWidget {
             children: [
               Text('MATH', style: TextStyle(
                 fontSize: 24, fontWeight: FontWeight.w900,
-                color: isDark ? AppColors.neonGreen : AppColors.duoGreen,
+                color: isDark ? AppColors.mint : AppColors.cobalt,
                 letterSpacing: -0.5, height: 1,
               )),
               Text('CHALLENGE', style: TextStyle(
@@ -98,13 +98,13 @@ class _TopBar extends StatelessWidget {
             child: Container(
               width: 36, height: 36,
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkCard : AppColors.lightCard,
+                color: isDark ? AppColors.darkCard : AppColors.keyWhite,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 isDark ? Icons.wb_sunny_rounded : Icons.nightlight_round,
                 size: 18,
-                color: isDark ? AppColors.neonYellow : AppColors.skyBlue,
+                color: isDark ? AppColors.sunflower : AppColors.gradientBottom,
               ),
             ),
           ),
@@ -124,10 +124,10 @@ class _StreakBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
+        color: isDark ? AppColors.darkCard : AppColors.keyWhite,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppColors.neonOrange.withOpacity(0.4),
+          color: AppColors.sunflower.withOpacity(0.5),
         ),
       ),
       child: Row(
@@ -137,7 +137,7 @@ class _StreakBadge extends StatelessWidget {
           const SizedBox(width: 4),
           Text('$days', style: TextStyle(
             fontSize: 15, fontWeight: FontWeight.w800,
-            color: AppColors.neonOrange,
+            color: AppColors.sunflower,
           )),
         ],
       ),
@@ -152,7 +152,7 @@ class _DailyRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isDark ? AppColors.neonGreen : AppColors.duoGreen;
+    final color = isDark ? AppColors.mint : AppColors.cobalt;
     return Tooltip(
       message: 'Daily goal: ${(progress * 100).toInt()}%',
       child: SizedBox(
@@ -167,8 +167,8 @@ class _DailyRing extends StatelessWidget {
               valueColor: AlwaysStoppedAnimation(color),
             ),
             Text('${(progress * 100).toInt()}',
-              style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800,
-                color: isDark ? Colors.white : Colors.black87)),
+                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white : Colors.black87)),
           ],
         ),
       ),
@@ -217,8 +217,8 @@ class _LevelSection extends StatelessWidget {
                 ),
                 child: Center(
                   child: Text(level.emoji,
-                    style: TextStyle(fontSize: 22,
-                      color: levelUnlocked ? null : Colors.grey)),
+                      style: TextStyle(fontSize: 22,
+                          color: levelUnlocked ? null : Colors.grey)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -227,18 +227,18 @@ class _LevelSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(level.title,
-                      style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w800,
-                        color: levelUnlocked
-                          ? (isDark ? Colors.white : Colors.black)
-                          : Colors.grey,
-                      )),
+                        style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w800,
+                          color: levelUnlocked
+                              ? (isDark ? Colors.white : Colors.black)
+                              : Colors.grey,
+                        )),
                     Text(level.description,
-                      style: TextStyle(fontSize: 12,
-                        color: levelUnlocked
-                          ? (isDark ? Colors.white54 : Colors.black45)
-                          : Colors.grey.withOpacity(0.5),
-                      )),
+                        style: TextStyle(fontSize: 12,
+                          color: levelUnlocked
+                              ? (isDark ? Colors.white54 : Colors.black45)
+                              : Colors.grey.withOpacity(0.5),
+                        )),
                   ],
                 ),
               ),
@@ -256,7 +256,7 @@ class _LevelSection extends StatelessWidget {
         )),
 
         const SizedBox(height: 8),
-        Divider(color: isDark ? Colors.white10 : Colors.black12, indent: 20, endIndent: 20),
+        Divider(color: isDark ? Colors.white10 : AppColors.cobalt.withOpacity(0.10), indent: 20, endIndent: 20),
         const SizedBox(height: 8),
       ],
     );
@@ -404,14 +404,14 @@ class _StageNode extends StatelessWidget {
 
     Widget node = GestureDetector(
       onTap: unlocked
-        ? () => _launchStage(context)
-        : () => Get.snackbar(
-            '🔒 Locked', 'Complete the previous stage first!',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: isDark ? AppColors.darkCard : Colors.white,
-            colorText: isDark ? Colors.white : Colors.black,
-            duration: const Duration(seconds: 2),
-          ),
+          ? () => _launchStage(context)
+          : () => Get.snackbar(
+        '🔒 Locked', 'Complete the previous stage first!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: isDark ? AppColors.darkCard : Colors.white,
+        colorText: isDark ? Colors.white : Colors.black,
+        duration: const Duration(seconds: 2),
+      ),
       child: Column(
         children: [
           Container(
@@ -444,10 +444,10 @@ class _StageNode extends StatelessWidget {
                     ),
                     child: Center(
                       child: completed
-                        ? Icon(Icons.star_rounded, color: Colors.white, size: 28)
-                        : unlocked
+                          ? Icon(Icons.star_rounded, color: Colors.white, size: 28)
+                          : unlocked
                           ? Text('${index + 1}',
-                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: iconColor))
+                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: iconColor))
                           : Icon(Icons.lock_rounded, color: iconColor, size: 24),
                     ),
                   ),
@@ -457,12 +457,12 @@ class _StageNode extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(stage.title,
-            style: TextStyle(
-              fontSize: 11, fontWeight: FontWeight.w700,
-              color: unlocked
-                ? (isDark ? Colors.white70 : Colors.black54)
-                : Colors.grey.withOpacity(0.5),
-            )),
+              style: TextStyle(
+                fontSize: 11, fontWeight: FontWeight.w700,
+                color: unlocked
+                    ? (isDark ? Colors.white70 : Colors.black54)
+                    : Colors.grey.withOpacity(0.5),
+              )),
         ],
       ),
     );
@@ -491,8 +491,8 @@ class _ModePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg     = isDark ? AppColors.darkSurface : Colors.white;
-    final border = isDark ? AppColors.darkBorder   : AppColors.lightBorder;
+    final bg     = isDark ? AppColors.darkCard : AppColors.keyWhite;
+    final border = isDark ? AppColors.darkDivider : AppColors.cobalt.withOpacity(0.15);
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -505,19 +505,19 @@ class _ModePicker extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(width: 40, height: 4,
-            decoration: BoxDecoration(color: border, borderRadius: BorderRadius.circular(2))),
+              decoration: BoxDecoration(color: border, borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 20),
           Text(stage.title,
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800,
-              color: isDark ? Colors.white : Colors.black)),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800,
+                  color: isDark ? Colors.white : Colors.black)),
           const SizedBox(height: 4),
           Text('${stage.questionsRequired} questions to complete',
-            style: TextStyle(fontSize: 13,
-              color: isDark ? Colors.white54 : Colors.black45)),
+              style: TextStyle(fontSize: 13,
+                  color: isDark ? Colors.white54 : Colors.black45)),
           const SizedBox(height: 24),
           ChunkyButton(
             label: 'Solo Practice',
-            color: AppColors.duoGreen, shadowColor: AppColors.duoGreenDark,
+            color: AppColors.cobalt, shadowColor: AppColors.cobaltDark,
             textColor: Colors.white,
             icon: const Icon(Icons.person_rounded, color: Colors.white, size: 18),
             onTap: () {
@@ -530,7 +530,7 @@ class _ModePicker extends StatelessWidget {
           const SizedBox(height: 12),
           ChunkyButton(
             label: 'VS Machine',
-            color: AppColors.skyBlue, shadowColor: AppColors.skyBlueDark,
+            color: AppColors.gradientBottom, shadowColor: AppColors.gradientBottomDark,
             textColor: Colors.white,
             icon: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 18),
             onTap: () {
