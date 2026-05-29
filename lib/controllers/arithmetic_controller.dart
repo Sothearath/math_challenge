@@ -236,6 +236,40 @@ class ArithmeticController extends GetxController {
     });
   }
 
+  void loadNextLevel(LevelConfig nextLevel) {
+
+    currentLevel = nextLevel;
+
+    // Reset gameplay state
+
+    userInput.value = '';
+
+    questionsAnswered.value = 0;
+
+    streak.value = 0;
+
+    progressTarget.value = 0;
+
+    comboActive.value = false;
+
+    dangerState.value = false;
+
+    // Reset timer
+
+    timeLeft.value = currentLevel.timeLimitSeconds;
+
+    // Generate first equation
+
+    _generateEquation();
+
+    // Restart timer
+
+    _timer?.cancel();
+
+    _startTimer();
+
+  }
+
   // ── Quit ──────────────────────────────────────────────────────────────────────
   void quitGame() {
     _stopTimer();

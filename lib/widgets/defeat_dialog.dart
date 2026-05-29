@@ -1,19 +1,14 @@
 // lib/features/game/widgets/defeat_dialog.dart
-//
-// "Game Over" defeat dialog.
-// Features:
-//   • Exhausted Brainy with sweatband (CustomPainter)
-//   • Empathetic message
-//   • Shake entry animation
-//   • Try Again / Dashboard buttons
 
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants.dart';
 import '../bindings/app_bindings.dart';
 import '../controllers/arithmetic_controller.dart';
 import '../models/level_config.dart';
+import '../theme/app_theme.dart';
 import '../views/arithmetic_challenge_view.dart';
 
 class DefeatDialog extends StatefulWidget {
@@ -37,13 +32,12 @@ class _DefeatDialogState extends State<DefeatDialog>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
-
     _shake = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -8, end: 8),  weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 8, end: 0),   weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 0,   end: -12), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -12, end: 12),  weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 12,  end: -8),  weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -8,  end: 8),   weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 8,   end: 0),   weight: 1),
     ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
 
     _fade = CurvedAnimation(parent: _ctrl, curve: const Interval(0.0, 0.4))
@@ -64,123 +58,177 @@ class _DefeatDialogState extends State<DefeatDialog>
       animation: _ctrl,
       builder: (_, child) => FadeTransition(
         opacity: _fade,
-        child: Transform.translate(
-          offset: Offset(_shake.value, 0),
-          child: child,
-        ),
+        child: Transform.translate(offset: Offset(_shake.value, 0), child: child),
       ),
       child: Dialog(
         backgroundColor: Colors.transparent,
         insetPadding: const EdgeInsets.symmetric(horizontal: 24),
         child: Container(
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF1A0A0A), Color(0xFF0A1628)],
-            ),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: const Color(0xFFFF5252), width: 2),
+            // Dark card — consistent with equation card
+            color: AppColors.darkCard,
+            borderRadius: BorderRadius.circular(AppTheme.radiusDialog),
+            border: Border.all(color: AppColors.heartDanger.withOpacity(0.30)),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFFF5252).withOpacity(0.25),
+                color: AppColors.heartDanger.withOpacity(0.18),
                 blurRadius: 40,
                 spreadRadius: 4,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
-          padding: const EdgeInsets.fromLTRB(28, 32, 28, 24),
+          clipBehavior: Clip.antiAlias,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // ── Exhausted mascot ──
-              SizedBox(
-                width: 120,
-                height: 130,
-                child: CustomPaint(painter: _ExhaustedBrainyPainter()),
-              ),
-              const SizedBox(height: 20),
 
-              // ── Headline ──
-              const Text(
-                'Close one!',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
+              // ── Danger header band ─────────────────────────────────────────
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                decoration: BoxDecoration(
+                  // Desaturated danger gradient — dark rose → darkCard
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      AppColors.heartDanger.withOpacity(0.22),
+                      AppColors.darkCard,
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
+                child: Column(
+                  children: [
+                    // Exhausted mascot
+                    SizedBox(
+                      width: 120,
+                      height: 130,
+                      child: CustomPaint(painter: _ExhaustedBrainyPainter()),
+                    ),
+                    const SizedBox(height: 16),
 
-              // ── Subtitle ──
-              const Text(
-                "Let's rest the brain and try again.",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 15,
-                  color: Colors.white60,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 28),
-
-              // ── Buttons ──
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        Get.back();
-                        Get.offAllNamed(Routes.dashboard);
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white54,
-                        side: const BorderSide(color: Colors.white24),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14)),
-                      ),
-                      child: const Text(
-                        'Rest',
-                        style: TextStyle(
-                            fontFamily: 'Nunito', fontWeight: FontWeight.w700),
+                    // Headline
+                    Text(
+                      'Close one! 😓',
+                      style: GoogleFonts.nunito(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Get.back();
-                        Get.delete<ArithmeticController>(force: true);
-                        Get.off(
-                              () => const ArithmeticChallengeView(),
-                          binding: GameBinding(),
-                          arguments: widget.currentLevel,
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF5252),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14)),
-                        elevation: 0,
+                  ],
+                ),
+              ),
+
+              // ── Body — dark card surface ────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                child: Column(
+                  children: [
+
+                    // Subtitle
+                    Text(
+                      "Let's rest the brain and try again.",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.nunito(
+                        fontSize: 15,
+                        color: AppColors.mintDim,
+                        height: 1.4,
                       ),
-                      child: const Text(
-                        '🔄 Try Again',
-                        style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w900,
-                          fontSize: 15,
+                    ),
+                    const SizedBox(height: 28),
+
+                    // Buttons
+                    Row(
+                      children: [
+
+                        // Rest — pill-style matching top-bar buttons
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              Get.back();
+                              Get.offAllNamed(Routes.dashboard);
+                            },
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.mintDim,
+                              side: BorderSide(
+                                  color: AppColors.darkDivider, width: 1.5),
+                              padding:
+                              const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(
+                                      AppTheme.radiusKey)),
+                            ),
+                            child: Text('Rest',
+                                style: GoogleFonts.nunito(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.mintDim)),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 12),
+
+                        // Try Again — heartDanger gradient matching submit-key style
+                        Expanded(
+                          flex: 2,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  AppColors.heartDanger,
+                                  Color(0xFFFF6B6B), // heartRed — lighter end
+                                ],
+                              ),
+                              borderRadius:
+                              BorderRadius.circular(AppTheme.radiusKey),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.heartDanger.withOpacity(0.40),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              borderRadius:
+                              BorderRadius.circular(AppTheme.radiusKey),
+                              child: InkWell(
+                                borderRadius:
+                                BorderRadius.circular(AppTheme.radiusKey),
+                                onTap: () {
+                                  Get.back();
+                                  Get.delete<ArithmeticController>(force: true);
+                                  Get.off(
+                                        () => const ArithmeticChallengeView(),
+                                    binding: GameBinding(),
+                                    arguments: widget.currentLevel,
+                                  );
+                                },
+                                child: Padding(
+                                  padding:
+                                  const EdgeInsets.symmetric(vertical: 14),
+                                  child: Center(
+                                    child: Text(
+                                      '🔄 Try Again',
+                                      style: GoogleFonts.nunito(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 15,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -194,133 +242,104 @@ class _DefeatDialogState extends State<DefeatDialog>
 class _ExhaustedBrainyPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final teal   = Paint()..color = const Color(0xFF00C896);
-    final dark   = Paint()..color = const Color(0xFF00352A);
-    final white  = Paint()..color = Colors.white;
-    final red    = Paint()..color = const Color(0xFFFF5252);
-    final sweat  = Paint()..color = const Color(0xFF40C4FF).withOpacity(0.7);
+    final teal  = Paint()..color = AppColors.brainyBody;
+    final dark  = Paint()..color = AppColors.darkBg;
+    // Sweat drops use gradientBottom (sky blue) — cohesive with the palette
+    final sweat = Paint()..color = AppColors.gradientBottom.withOpacity(0.80);
 
     final cx = size.width / 2;
-    final hy = size.height * 0.30; // head y centre
+    final hy = size.height * 0.30;
 
-    // Head glow (dim red tint for defeat)
-    canvas.drawCircle(
-        Offset(cx, hy),
-        36,
+    // Soft danger glow behind head
+    canvas.drawCircle(Offset(cx, hy), 36,
         Paint()
-          ..color = const Color(0xFFFF5252).withOpacity(0.10)
+          ..color = AppColors.heartDanger.withOpacity(0.10)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14));
 
     // Head
     canvas.drawCircle(Offset(cx, hy), 32, teal);
 
-    // Sweatband
+    // Sweatband — heartDanger stripe
     canvas.drawArc(
-        Rect.fromCircle(center: Offset(cx, hy), radius: 32),
-        math.pi + 0.3,
-        math.pi - 0.6,
-        false,
-        Paint()
-          ..color = const Color(0xFFFF5252)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 8
-          ..strokeCap = StrokeCap.round);
+      Rect.fromCircle(center: Offset(cx, hy), radius: 32),
+      math.pi + 0.3, math.pi - 0.6, false,
+      Paint()
+        ..color = AppColors.heartDanger
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 8
+        ..strokeCap = StrokeCap.round,
+    );
 
-    // Tired eyes (half-closed — drawn as short arcs)
+    // Tired eyes
     _drawTiredEye(canvas, Offset(cx - 10, hy + 2), dark);
     _drawTiredEye(canvas, Offset(cx + 10, hy + 2), dark);
 
     // Sweat drops
     canvas.drawOval(
-        Rect.fromCenter(
-            center: Offset(cx + 28, hy - 6), width: 6, height: 9),
-        sweat);
+        Rect.fromCenter(center: Offset(cx + 28, hy - 6), width: 6, height: 9), sweat);
     canvas.drawOval(
-        Rect.fromCenter(
-            center: Offset(cx + 34, hy + 4), width: 4, height: 7),
-        sweat);
+        Rect.fromCenter(center: Offset(cx + 34, hy + 4), width: 4, height: 7), sweat);
 
-    // Slight frown
-    final frownPath = Path()
-      ..moveTo(cx - 9, hy + 16)
-      ..quadraticBezierTo(cx, hy + 12, cx + 9, hy + 16);
+    // Frown
     canvas.drawPath(
-        frownPath,
-        Paint()
-          ..color = dark.color
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.5
-          ..strokeCap = StrokeCap.round);
+      Path()
+        ..moveTo(cx - 9, hy + 16)
+        ..quadraticBezierTo(cx, hy + 12, cx + 9, hy + 16),
+      Paint()
+        ..color = AppColors.darkBg
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5
+        ..strokeCap = StrokeCap.round,
+    );
 
     // Body
-    final bodyRect = RRect.fromRectAndRadius(
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
         Rect.fromCenter(
-            center: Offset(cx, size.height * 0.63),
-            width: 42,
-            height: 42),
-        const Radius.circular(10));
-    canvas.drawRRect(bodyRect, teal);
+            center: Offset(cx, size.height * 0.63), width: 42, height: 42),
+        const Radius.circular(10),
+      ),
+      teal,
+    );
 
     // Arms drooping
-    final leftArm = Path()
-      ..moveTo(cx - 21, size.height * 0.56)
-      ..quadraticBezierTo(
-          cx - 38, size.height * 0.66, cx - 32, size.height * 0.75);
-    canvas.drawPath(
-        leftArm,
-        Paint()
-          ..color = teal.color
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 10
-          ..strokeCap = StrokeCap.round);
-
-    final rightArm = Path()
-      ..moveTo(cx + 21, size.height * 0.56)
-      ..quadraticBezierTo(
-          cx + 38, size.height * 0.66, cx + 32, size.height * 0.75);
-    canvas.drawPath(
-        rightArm,
-        Paint()
-          ..color = teal.color
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 10
-          ..strokeCap = StrokeCap.round);
+    for (final path in [
+      Path()
+        ..moveTo(cx - 21, size.height * 0.56)
+        ..quadraticBezierTo(cx - 38, size.height * 0.66, cx - 32, size.height * 0.75),
+      Path()
+        ..moveTo(cx + 21, size.height * 0.56)
+        ..quadraticBezierTo(cx + 38, size.height * 0.66, cx + 32, size.height * 0.75),
+    ]) {
+      canvas.drawPath(path,
+          Paint()
+            ..color = AppColors.brainyBody
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 10
+            ..strokeCap = StrokeCap.round);
+    }
 
     // Legs
-    canvas.drawLine(
-        Offset(cx - 10, size.height * 0.84),
-        Offset(cx - 13, size.height * 0.97),
-        Paint()
-          ..color = teal.color
-          ..strokeWidth = 10
-          ..strokeCap = StrokeCap.round);
-    canvas.drawLine(
-        Offset(cx + 10, size.height * 0.84),
-        Offset(cx + 13, size.height * 0.97),
-        Paint()
-          ..color = teal.color
-          ..strokeWidth = 10
-          ..strokeCap = StrokeCap.round);
+    for (final pts in [
+      [Offset(cx - 10, size.height * 0.84), Offset(cx - 13, size.height * 0.97)],
+      [Offset(cx + 10, size.height * 0.84), Offset(cx + 13, size.height * 0.97)],
+    ]) {
+      canvas.drawLine(pts[0], pts[1],
+          Paint()..color = AppColors.brainyBody..strokeWidth = 10..strokeCap = StrokeCap.round);
+    }
   }
 
   void _drawTiredEye(Canvas canvas, Offset center, Paint paint) {
-    // Half-closed eye = a short horizontal ellipse with a flat top
     canvas.drawArc(
-        Rect.fromCenter(center: center, width: 10, height: 8),
-        0,
-        math.pi,
-        false,
-        Paint()
-          ..color = paint.color
-          ..style = PaintingStyle.fill);
-    // Eyelid line
+      Rect.fromCenter(center: center, width: 10, height: 8),
+      0, math.pi, false,
+      Paint()..color = paint.color..style = PaintingStyle.fill,
+    );
     canvas.drawLine(
-        Offset(center.dx - 5, center.dy),
-        Offset(center.dx + 5, center.dy),
-        Paint()
-          ..color = paint.color
-          ..strokeWidth = 2.0
-          ..strokeCap = StrokeCap.round);
+      Offset(center.dx - 5, center.dy),
+      Offset(center.dx + 5, center.dy),
+      Paint()..color = paint.color..strokeWidth = 2.0..strokeCap = StrokeCap.round,
+    );
   }
 
   @override

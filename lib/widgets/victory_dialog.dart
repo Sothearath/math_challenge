@@ -1,18 +1,13 @@
 // lib/features/game/widgets/victory_dialog.dart
-//
-// Gorgeous "Level Win" dialog shown when a round is completed.
-// Features:
-//   • Brainy mascot raising a trophy (CustomPainter)
-//   • Animated XP counter ticking up from 0 to xpGained
-//   • "Level Unlocked!" headline with complexity badge
-//   • Two action buttons: Next Level / Back to Dashboard
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants.dart';
 import '../bindings/app_bindings.dart';
 import '../controllers/arithmetic_controller.dart';
 import '../models/level_config.dart';
+import '../theme/app_theme.dart';
 import '../views/arithmetic_challenge_view.dart';
 
 class VictoryDialog extends StatefulWidget {
@@ -46,17 +41,15 @@ class _VictoryDialogState extends State<VictoryDialog>
   void initState() {
     super.initState();
 
-    // Entry scale + fade
     _entryCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 420),
     );
     _scaleAnim = CurvedAnimation(parent: _entryCtrl, curve: Curves.elasticOut)
         .drive(Tween(begin: 0.6, end: 1.0));
-    _fadeAnim  = CurvedAnimation(parent: _entryCtrl, curve: Curves.easeIn)
+    _fadeAnim = CurvedAnimation(parent: _entryCtrl, curve: Curves.easeIn)
         .drive(Tween(begin: 0.0, end: 1.0));
 
-    // XP counter tick (delayed 300 ms after entry)
     _xpCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -66,7 +59,6 @@ class _VictoryDialogState extends State<VictoryDialog>
           .chain(CurveTween(curve: Curves.easeOut)),
     );
 
-    // Trophy bounce loop
     _trophyCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -74,7 +66,6 @@ class _VictoryDialogState extends State<VictoryDialog>
     _trophyBounce = Tween(begin: -6.0, end: 6.0)
         .animate(CurvedAnimation(parent: _trophyCtrl, curve: Curves.easeInOut));
 
-    // Sequence
     _entryCtrl.forward().then((_) {
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) _xpCtrl.forward();
@@ -101,157 +92,204 @@ class _VictoryDialogState extends State<VictoryDialog>
           insetPadding: const EdgeInsets.symmetric(horizontal: 24),
           child: Container(
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFF0D2B1F), Color(0xFF0A1628)],
-              ),
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: const Color(0xFF00C896), width: 2),
+              // Dark card — matches equation card in ArithmeticChallengeView
+              color: AppColors.darkCard,
+              borderRadius: BorderRadius.circular(AppTheme.radiusDialog),
+              border: Border.all(color: AppColors.mint.withOpacity(0.30)),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF00C896).withOpacity(0.35),
+                  color: AppColors.mint.withOpacity(0.20),
                   blurRadius: 40,
                   spreadRadius: 4,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
-            padding: const EdgeInsets.fromLTRB(28, 32, 28, 24),
+            // Clip so the gradient header respects the dialog border radius
+            clipBehavior: Clip.antiAlias,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // ── Trophy mascot ──
-                AnimatedBuilder(
-                  animation: _trophyBounce,
-                  builder: (_, __) => Transform.translate(
-                    offset: Offset(0, _trophyBounce.value),
-                    child: _BrainyTrophyMascot(),
-                  ),
-                ),
-                const SizedBox(height: 20),
 
-                // ── "Level Unlocked!" ──
-                const Text(
-                  'Level Unlocked!',
-                  style: TextStyle(
-                    fontFamily: 'Nunito',
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // ── Complexity badge ──
+                // ── Gradient header band — matches app gradient ─────────────
                 Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF00C896).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: const Color(0xFF00C896).withOpacity(0.5)),
-                  ),
-                  child: Text(
-                    'Complexity increased to ${widget.newComplexity}%',
-                    style: const TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 13,
-                      color: Color(0xFF00C896),
-                      fontWeight: FontWeight.w700,
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [AppColors.gradientTop, AppColors.gradientBottom],
                     ),
                   ),
-                ),
-                const SizedBox(height: 24),
-
-                // ── XP counter ──
-                AnimatedBuilder(
-                  animation: _xpAnim,
-                  builder: (_, __) => Column(
+                  child: Column(
                     children: [
-                      Text(
-                        '+${_xpAnim.value} XP',
-                        style: const TextStyle(
-                          fontFamily: 'Nunito',
-                          fontSize: 40,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFFFFB300),
-                          height: 1,
+                      // Trophy mascot bouncing
+                      AnimatedBuilder(
+                        animation: _trophyBounce,
+                        builder: (_, __) => Transform.translate(
+                          offset: Offset(0, _trophyBounce.value),
+                          child: _BrainyTrophyMascot(),
                         ),
                       ),
-                      const Text(
-                        'earned this round',
-                        style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontSize: 13,
-                          color: Colors.white54,
+                      const SizedBox(height: 16),
+
+                      // Headline — cobalt on gradient
+                      Text(
+                        'Level Unlocked! 🎉',
+                        style: GoogleFonts.nunito(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.cobalt,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Complexity badge — frosted glass pill
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.30),
+                          borderRadius:
+                          BorderRadius.circular(AppTheme.radiusBadge),
+                          border: Border.all(
+                              color: Colors.white.withOpacity(0.55)),
+                        ),
+                        child: Text(
+                          'Complexity increased to ${widget.newComplexity}%',
+                          style: GoogleFonts.nunito(
+                            fontSize: 12,
+                            color: AppColors.cobalt,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 28),
 
-                // ── Buttons ──
-                Row(
-                  children: [
-                    // Back
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () {
-                          Get.back();
-                          Get.offAllNamed(Routes.dashboard);
-                        },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white70,
-                          side: const BorderSide(color: Colors.white24),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14)),
-                        ),
-                        child: const Text(
-                          'Dashboard',
-                          style: TextStyle(
-                              fontFamily: 'Nunito', fontWeight: FontWeight.w700),
+                // ── Body — dark card surface ────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+                  child: Column(
+                    children: [
+
+                      // XP counter — sunflower accent
+                      AnimatedBuilder(
+                        animation: _xpAnim,
+                        builder: (_, __) => Column(
+                          children: [
+                            Text(
+                              '+${_xpAnim.value} XP',
+                              style: GoogleFonts.nunito(
+                                fontSize: 48,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.sunflower,
+                                height: 1,
+                              ),
+                            ),
+                            Text(
+                              'earned this round',
+                              style: GoogleFonts.nunito(
+                                fontSize: 13,
+                                color: AppColors.mintDim,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Next level
-                    Expanded(
-                      flex: 2,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          // Single Get.back() closes the dialog only.
-                          // Get.off() replaces the game route underneath.
-                          Get.back();
-                          Get.delete<ArithmeticController>(force: true);
-                          Get.off(
-                                () => const ArithmeticChallengeView(),
-                            binding: GameBinding(),
-                            arguments: widget.nextLevel,
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF00C896),
-                          foregroundColor: const Color(0xFF0A1628),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14)),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          '🚀 Next Level',
-                          style: TextStyle(
-                            fontFamily: 'Nunito',
-                            fontWeight: FontWeight.w900,
-                            fontSize: 15,
+                      const SizedBox(height: 28),
+
+                      // Buttons row
+                      Row(
+                        children: [
+
+                          // Dashboard — outlined mint
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () {
+                                Get.back();
+                                Get.offAllNamed(Routes.dashboard);
+                              },
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.mintDim,
+                                side: BorderSide(
+                                    color: AppColors.darkDivider, width: 1.5),
+                                padding:
+                                const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                        AppTheme.radiusKey)),
+                              ),
+                              child: Text('Dashboard',
+                                  style: GoogleFonts.nunito(
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.mintDim)),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 12),
+
+                          // Next Level — mint gradient matching submit key
+                          Expanded(
+                            flex: 2,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [AppColors.mint, AppColors.mintGlow],
+                                ),
+                                borderRadius:
+                                BorderRadius.circular(AppTheme.radiusKey),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.mint.withOpacity(0.40),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Material(
+                                color: Colors.transparent,
+                                borderRadius:
+                                BorderRadius.circular(AppTheme.radiusKey),
+                                child: InkWell(
+                                  borderRadius:
+                                  BorderRadius.circular(AppTheme.radiusKey),
+                                  onTap: () {
+                                    Get.back();
+                                    Get.delete<ArithmeticController>(
+                                        force: true);
+                                    Get.off(
+                                          () => const ArithmeticChallengeView(),
+                                      binding: GameBinding(),
+                                      arguments: widget.nextLevel,
+                                    );
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 14),
+                                    child: Center(
+                                      child: Text(
+                                        '🚀 Next Level',
+                                        style: GoogleFonts.nunito(
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 15,
+                                          color: AppColors.mintText,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -268,7 +306,7 @@ class _BrainyTrophyMascot extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 130,
-      height: 140,
+      height: 130,
       child: CustomPaint(painter: _TrophyMascotPainter()),
     );
   }
@@ -277,209 +315,143 @@ class _BrainyTrophyMascot extends StatelessWidget {
 class _TrophyMascotPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final teal   = Paint()..color = const Color(0xFF00C896);
-    final dark   = Paint()..color = const Color(0xFF00352A);
-    final white  = Paint()..color = Colors.white;
-    final amber  = Paint()..color = const Color(0xFFFFB300);
-    final glow   = Paint()
-      ..color    = const Color(0xFF00C896).withOpacity(0.18)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+    final teal  = Paint()..color = AppColors.brainyBody;
+    final dark  = Paint()..color = AppColors.darkBg;
+    final white = Paint()..color = Colors.white;
+    final amber = Paint()..color = AppColors.sunflower;
+
+    // White glow on gradient bg
+    canvas.drawCircle(
+      Offset(size.width / 2, size.height * 0.28),
+      40,
+      Paint()
+        ..color = Colors.white.withOpacity(0.20)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14),
+    );
 
     final cx = size.width / 2;
 
-    // Glow halo
-    canvas.drawCircle(Offset(cx, size.height * 0.28), 38, glow);
-
-    // Head (circle)
+    // Head
     canvas.drawCircle(Offset(cx, size.height * 0.28), 34, teal);
-    // Head shine
     canvas.drawCircle(Offset(cx - 10, size.height * 0.20), 10,
-        Paint()..color = Colors.white.withOpacity(0.18));
+        Paint()..color = Colors.white.withOpacity(0.20));
 
     // Eyes
     canvas.drawCircle(Offset(cx - 10, size.height * 0.26), 5, dark);
     canvas.drawCircle(Offset(cx + 10, size.height * 0.26), 5, dark);
-    // Eye shine
     canvas.drawCircle(Offset(cx - 8, size.height * 0.245), 2, white);
     canvas.drawCircle(Offset(cx + 12, size.height * 0.245), 2, white);
 
     // Smile
-    final smilePath = Path()
-      ..moveTo(cx - 10, size.height * 0.315)
-      ..quadraticBezierTo(cx, size.height * 0.345, cx + 10, size.height * 0.315);
     canvas.drawPath(
-        smilePath,
-        Paint()
-          ..color = dark.color
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.5
-          ..strokeCap = StrokeCap.round);
+      Path()
+        ..moveTo(cx - 10, size.height * 0.315)
+        ..quadraticBezierTo(cx, size.height * 0.345, cx + 10, size.height * 0.315),
+      Paint()
+        ..color = AppColors.darkBg
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5
+        ..strokeCap = StrokeCap.round,
+    );
 
     // Body
-    final bodyRect = RRect.fromRectAndRadius(
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
         Rect.fromCenter(
-            center: Offset(cx, size.height * 0.60),
-            width: 44,
-            height: 44),
-        const Radius.circular(10));
-    canvas.drawRRect(bodyRect, teal);
+            center: Offset(cx, size.height * 0.60), width: 44, height: 44),
+        const Radius.circular(10),
+      ),
+      teal,
+    );
 
-    // Arms raised (trophy pose)
-    // Left arm
-    final leftArm = Path()
-      ..moveTo(cx - 22, size.height * 0.55)
-      ..quadraticBezierTo(
-          cx - 44, size.height * 0.42, cx - 38, size.height * 0.36);
-    canvas.drawPath(
-        leftArm,
-        Paint()
-          ..color = teal.color
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 10
-          ..strokeCap = StrokeCap.round);
-
-    // Right arm
-    final rightArm = Path()
-      ..moveTo(cx + 22, size.height * 0.55)
-      ..quadraticBezierTo(
-          cx + 44, size.height * 0.42, cx + 38, size.height * 0.36);
-    canvas.drawPath(
-        rightArm,
-        Paint()
-          ..color = teal.color
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 10
-          ..strokeCap = StrokeCap.round);
+    // Arms raised
+    for (final path in [
+      Path()
+        ..moveTo(cx - 22, size.height * 0.55)
+        ..quadraticBezierTo(cx - 44, size.height * 0.42, cx - 38, size.height * 0.36),
+      Path()
+        ..moveTo(cx + 22, size.height * 0.55)
+        ..quadraticBezierTo(cx + 44, size.height * 0.42, cx + 38, size.height * 0.36),
+    ]) {
+      canvas.drawPath(path,
+          Paint()
+            ..color = AppColors.brainyBody
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 10
+            ..strokeCap = StrokeCap.round);
+    }
 
     // Legs
-    canvas.drawLine(Offset(cx - 10, size.height * 0.82),
-        Offset(cx - 14, size.height * 0.97),
-        Paint()
-          ..color = teal.color
-          ..strokeWidth = 10
-          ..strokeCap = StrokeCap.round);
-    canvas.drawLine(Offset(cx + 10, size.height * 0.82),
-        Offset(cx + 14, size.height * 0.97),
-        Paint()
-          ..color = teal.color
-          ..strokeWidth = 10
-          ..strokeCap = StrokeCap.round);
+    for (final pts in [
+      [Offset(cx - 10, size.height * 0.82), Offset(cx - 14, size.height * 0.97)],
+      [Offset(cx + 10, size.height * 0.82), Offset(cx + 14, size.height * 0.97)],
+    ]) {
+      canvas.drawLine(pts[0], pts[1],
+          Paint()..color = AppColors.brainyBody..strokeWidth = 10..strokeCap = StrokeCap.round);
+    }
 
-    // ── Trophy ──────────────────────────────────────────────────────────────
-    final trophyTop = Offset(cx, size.height * 0.10);
+    // ── Trophy ────────────────────────────────────────────────────────────────
+    final top = Offset(cx, size.height * 0.10);
 
-    // Trophy cup outline glow
-    canvas.drawCircle(trophyTop, 22,
+    // Sunflower glow
+    canvas.drawCircle(top, 22,
         Paint()
-          ..color = const Color(0xFFFFB300).withOpacity(0.25)
+          ..color = AppColors.sunflower.withOpacity(0.30)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8));
 
-    // Cup body
-    final cupPath = Path()
-      ..moveTo(trophyTop.dx - 16, trophyTop.dy - 10)
-      ..lineTo(trophyTop.dx - 12, trophyTop.dy + 10)
-      ..quadraticBezierTo(
-          trophyTop.dx, trophyTop.dy + 16, trophyTop.dx + 12, trophyTop.dy + 10)
-      ..lineTo(trophyTop.dx + 16, trophyTop.dy - 10)
-      ..close();
-    canvas.drawPath(cupPath, amber);
+    // Cup
+    canvas.drawPath(
+      Path()
+        ..moveTo(top.dx - 16, top.dy - 10)
+        ..lineTo(top.dx - 12, top.dy + 10)
+        ..quadraticBezierTo(top.dx, top.dy + 16, top.dx + 12, top.dy + 10)
+        ..lineTo(top.dx + 16, top.dy - 10)
+        ..close(),
+      amber,
+    );
 
-    // Cup handles
-    canvas.drawArc(
-        Rect.fromCenter(
-            center: Offset(trophyTop.dx - 14, trophyTop.dy - 2),
-            width: 10,
-            height: 12),
-        -1.5,
-        3.0,
-        false,
-        Paint()
-          ..color = amber.color
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3);
-    canvas.drawArc(
-        Rect.fromCenter(
-            center: Offset(trophyTop.dx + 14, trophyTop.dy - 2),
-            width: 10,
-            height: 12),
-        -1.6,
-        -3.0,
-        false,
-        Paint()
-          ..color = amber.color
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3);
+    // Handles
+    for (final r in [
+      Rect.fromCenter(center: Offset(top.dx - 14, top.dy - 2), width: 10, height: 12),
+      Rect.fromCenter(center: Offset(top.dx + 14, top.dy - 2), width: 10, height: 12),
+    ]) {
+      canvas.drawArc(r, r.left < top.dx ? -1.5 : -1.6,
+          r.left < top.dx ? 3.0 : -3.0, false,
+          Paint()..color = AppColors.sunflower..style = PaintingStyle.stroke..strokeWidth = 3);
+    }
 
-    // Star on trophy
-    _drawStar(canvas, trophyTop.translate(0, 0), 7, amber);
+    // Star on cup
+    _drawStar(canvas, top, 7, amber);
 
-    // Trophy stem + base
-    canvas.drawLine(
-        Offset(trophyTop.dx, trophyTop.dy + 16),
-        Offset(trophyTop.dx, trophyTop.dy + 22),
-        Paint()
-          ..color = amber.color
-          ..strokeWidth = 4);
+    // Stem + base
+    canvas.drawLine(Offset(top.dx, top.dy + 16), Offset(top.dx, top.dy + 22),
+        Paint()..color = AppColors.sunflower..strokeWidth = 4);
     canvas.drawRRect(
-        RRect.fromRectAndRadius(
-            Rect.fromCenter(
-                center: Offset(trophyTop.dx, trophyTop.dy + 25),
-                width: 24,
-                height: 6),
-            const Radius.circular(3)),
-        amber);
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(top.dx, top.dy + 25), width: 24, height: 6),
+        const Radius.circular(3),
+      ),
+      amber,
+    );
   }
 
   void _drawStar(Canvas canvas, Offset center, double r, Paint paint) {
     final path = Path();
     for (int i = 0; i < 5; i++) {
-      final outer = Offset(
-        center.dx + r * _cos(i * 72 - 90),
-        center.dy + r * _sin(i * 72 - 90),
-      );
-      final inner = Offset(
-        center.dx + (r / 2.2) * _cos(i * 72 + 36 - 90),
-        center.dy + (r / 2.2) * _sin(i * 72 + 36 - 90),
-      );
-      if (i == 0) {
-        path.moveTo(outer.dx, outer.dy);
-      } else {
-        path.lineTo(outer.dx, outer.dy);
-      }
-      path.lineTo(inner.dx, inner.dy);
+      final a1 = (i * 72 - 90) * 3.14159265 / 180;
+      final a2 = (i * 72 + 36 - 90) * 3.14159265 / 180;
+      final o = Offset(center.dx + r * _c(a1), center.dy + r * _s(a1));
+      final n = Offset(center.dx + (r / 2.2) * _c(a2), center.dy + (r / 2.2) * _s(a2));
+      i == 0 ? path.moveTo(o.dx, o.dy) : path.lineTo(o.dx, o.dy);
+      path.lineTo(n.dx, n.dy);
     }
     path.close();
     canvas.drawPath(path, paint);
   }
 
-  double _cos(double deg) => // ignore: unused_element
-  (deg * 3.14159265358979 / 180).let((r) => r.let((_) => _cosRad(r)));
-  double _sin(double deg) =>
-      (deg * 3.14159265358979 / 180).let((r) => _sinRad(r));
-
-  double _cosRad(double r) {
-    // Simple Taylor approximation sufficient for small star
-    double val = 1.0, term = 1.0;
-    for (int n = 1; n <= 6; n++) {
-      term *= -r * r / ((2 * n - 1) * (2 * n));
-      val  += term;
-    }
-    return val;
-  }
-
-  double _sinRad(double r) {
-    double val = r, term = r;
-    for (int n = 1; n <= 6; n++) {
-      term *= -r * r / ((2 * n) * (2 * n + 1));
-      val  += term;
-    }
-    return val;
-  }
+  double _c(double r) { double v=1,t=1; for(int n=1;n<=6;n++){t*=-r*r/((2*n-1)*(2*n));v+=t;} return v; }
+  double _s(double r) { double v=r,t=r; for(int n=1;n<=6;n++){t*=-r*r/((2*n)*(2*n+1));v+=t;} return v; }
 
   @override
   bool shouldRepaint(_TrophyMascotPainter old) => false;
-}
-
-extension _Let<T> on T {
-  R let<R>(R Function(T) block) => block(this);
 }

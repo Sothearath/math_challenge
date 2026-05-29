@@ -90,6 +90,14 @@ abstract class AppColors {
   static const mintDim       = Color(0xFF9EC4B0);
   static const mintFaint     = Color(0xFF4D7A62);
 
+  // ── Brainy mascot character colours ──────────────────────────────────────
+  /// Brainy's body green — intentionally distinct from `mint` so the
+  /// character can be recoloured independently of UI chrome.
+  static const brainyBody    = Color(0xFF00C896);
+
+  /// Brainy's deepest shadow — inner detail, eye pupils, frown path.
+  static const brainyDark    = Color(0xFF0D1F18); // reuses darkBg
+
   // ── C. Light surfaces (activity card, awards, dashboard card) ─────────────
   static const lightBg       = Color(0xFFF5F7F5);
   static const lightCard     = Colors.white;
@@ -130,7 +138,7 @@ abstract class AppColors {
 
   // ── E. Semantic / shared ──────────────────────────────────────────────────
   static const heartRed      = Color(0xFFEF4444);
-  static const heartDanger   = Color(0xFFFF3B30);  // 1-heart pulse
+  static const heartDanger   = Color(0xFFFF3B30);
   static const streakGreen   = Color(0xFF0F5E42);
   static const streakBg      = Color(0xFFD4F2E7);
   static const goldTrophy    = Color(0xFFFFD700);
@@ -154,35 +162,18 @@ abstract class AppColors {
   static const dotDayLabel   = Color(0xFFAAAAAA);
 
   // ── H. Shadows (pre-computed with opacity for BoxShadow) ──────────────────
-  /// Cobalt @ 16% — card drop shadow.
-  static const cobaltShadow16 = Color(0x292A65A9);
-
-  /// Cobalt @ 18% — numpad key drop shadow.
-  static const cobaltShadow18 = Color(0x2E2A65A9);
-
-  /// Cobalt @ 40% — submit button drop shadow.
-  static const cobaltShadow40 = Color(0x662A65A9);
-
-  /// Sunflower @ 45% — progress bar glow.
+  static const cobaltShadow16  = Color(0x292A65A9);
+  static const cobaltShadow18  = Color(0x2E2A65A9);
+  static const cobaltShadow40  = Color(0x662A65A9);
   static const sunflowerGlow45 = Color(0x73FFB61D);
-
-  /// Correct green @ 40% — combo answer-field glow.
-  static const correctGlow40  = Color(0x6634C759);
-
-  /// Mint @ 30% — dashboard CTA glow.
-  static const mintGlow30     = Color(0x4D2ED1A2);
+  static const correctGlow40   = Color(0x6634C759);
+  static const mintGlow30      = Color(0x4D2ED1A2);
 
   // ── I. On-gradient text ───────────────────────────────────────────────────
-
-  /// White @ 75% — muted labels on the Aqua→Sky gradient background
-  /// (progress bar labels, streak row, pill sub-text).
+  /// White @ 75% — muted labels on the Aqua→Sky gradient background.
   static const mutedOnGrad    = Color(0xBFFFFFFF);
 
   // ── J. Level-map node palette ─────────────────────────────────────────────
-  // Each GameLevel cycles through this list by index.
-  // levelColors     — face/fill colour of the stage node.
-  // levelColorsDark — shadow/border colour of the stage node.
-
   static const List<Color> levelColors = [
     Color(0xFF2A65A9), // cobalt        — Level 1
     Color(0xFF00C896), // mint-green    — Level 2
