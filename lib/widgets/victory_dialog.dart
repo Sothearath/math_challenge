@@ -259,14 +259,23 @@ class _VictoryDialogState extends State<VictoryDialog>
                                   borderRadius:
                                   BorderRadius.circular(AppTheme.radiusKey),
                                   onTap: () {
+                                    // First, safely close the open overlay alert dialog container
                                     Get.back();
-                                    Get.delete<ArithmeticController>(
-                                        force: true);
-                                    Get.off(
-                                          () => const ArithmeticChallengeView(),
-                                      binding: GameBinding(),
-                                      arguments: widget.nextLevel,
+
+                                    // Find the operational controller already in your memory pipeline
+                                    if (Get.isRegistered<ArithmeticController>()) {
+                                      final controller = Get.find<ArithmeticController>();
+
+                                      // Call the optimized recycler method we added to update parameters
+                                      controller.loadNextLevel(widget.nextLevel);
+                                    } else {
+                                      // Fallback: If for any reason the instance is missing, use your original hard reload pipeline[cite: 4]
+                                      Get.off(
+                                              () => const ArithmeticChallengeView(),
+                                          binding: GameBinding(),
+                                    arguments: widget.nextLevel,
                                     );
+                                    }
                                   },
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(

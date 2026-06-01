@@ -7,6 +7,7 @@ import '../controllers/arithmetic_controller.dart';
 import '../core/constants.dart';
 import '../painters/particle_burst_painter.dart';
 import '../theme/app_theme.dart';
+import '../widgets/numeric_keypad.dart';
 
 class ArithmeticChallengeView extends GetView<ArithmeticController> {
   const ArithmeticChallengeView({super.key});
@@ -52,6 +53,13 @@ class ArithmeticChallengeView extends GetView<ArithmeticController> {
                 final tick = controller.particleBurstTick.value;
                 if (tick == 0) return const SizedBox.shrink();
                 return ParticleBurstOverlay(key: ValueKey(tick));
+              }),
+
+              // Wrong answer flash — red overlay, re-keyed each wrong answer
+              Obx(() {
+                final tick = controller.wrongAnswerTick.value;
+                if (tick == 0) return const SizedBox.shrink();
+                return _WrongAnswerFlash(key: ValueKey('w$tick'));
               }),
             ],
           ),
@@ -709,6 +717,56 @@ class _FloatingLabelWidgetState extends State<_FloatingLabelWidget>
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Wrong answer flash ────────────────────────────────────────────────────────
+// Semi-transparent red overlay that fades in fast then fades out slowly.
+// Re-keyed by wrongAnswerTick so it always replays from scratch.
+// IgnorePointer ensures it never blocks taps on the numpad beneath.
+class _WrongAnswerFlash extends StatefulWidget {
+  const _WrongAnswerFlash({super.key});
+
+  @override
+  State<_WrongAnswerFlash> createState() => _WrongAnswerFlashState();
+}
+
+class _WrongAnswerFlashState extends State<_WrongAnswerFlash>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _anim;
+  late final Animation<double>   _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _anim = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 450),
+    );
+    // Flash in quickly (1 part = ~75 ms), fade out slowly (5 parts = ~375 ms)
+    _opacity = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 0.32), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 0.32, end: 0.0), weight: 5),
+    ]).animate(CurvedAnimation(parent: _anim, curve: Curves.easeOut));
+    _anim.forward();
+  }
+
+  @override
+  void dispose() {
+    _anim.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _opacity,
+      builder: (_, __) => IgnorePointer(
+        child: Container(
+          color: AppColors.heartDanger.withOpacity(_opacity.value),
         ),
       ),
     );

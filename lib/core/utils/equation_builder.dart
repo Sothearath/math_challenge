@@ -38,7 +38,7 @@ abstract class _EquationEngine {
         a = _rand(1, level.maxOperand);
         b = _rand(max(1, a ~/ 2), a);
 
-        // Always ensure positive result for UI keypad
+        // Always ensure positive result if requested by UI constraint
         if (!level.allowNegative && b > a) {
           final temp = a;
           a = b;
@@ -47,21 +47,32 @@ abstract class _EquationEngine {
         break;
 
       case MathOp.multiply:
-        final cap = max(2, sqrt(level.maxOperand.toDouble()).ceil());
-        a = _rand(2, cap);
-        b = _rand(2, cap);
+      // IMPROVEMENT: Protect multi-digit scaling. If maxOperand is forced lower
+      // by the controller, we scale down the multipliers gracefully.
+        if (level.maxOperand <= 12) {
+          // Downgraded or early levels: Single digit kids facts (e.g. 2x3 to 5x5)
+          a = _rand(2, 5);
+          b = _rand(2, 9);
+        } else if (level.maxOperand <= 30) {
+          // Standard middle tier
+          a = _rand(2, 9);
+          b = _rand(2, 12);
+        } else {
+          // Hard / Expert Multi-digit challenge
+          a = _rand(3, max(12, level.maxOperand ~/ 6));
+          b = _rand(3, max(12, level.maxOperand ~/ 8));
+        }
         break;
 
       case MathOp.divide:
-      // Ensure clean division + avoid zero issues
-        b = _rand(2, min(10, level.maxOperand));
+      // IMPROVEMENT: Safe layout for division bounds mapping
+        int maxDivisor = min(10, level.maxOperand ~/ 2).clamp(2, 12);
+        b = _rand(2, maxDivisor);
 
         final maxQuotient = max(2, level.maxOperand ~/ b);
         final quotient = _rand(2, maxQuotient);
 
         a = b * quotient;
-
-        // safety: ensure both positive (UI constraint)
         a = a.abs();
         b = b.abs();
         break;

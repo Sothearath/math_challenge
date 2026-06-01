@@ -10,7 +10,6 @@ import '../services/storage_service.dart';
 import '../widgets/victory_dialog.dart';
 import '../widgets/defeat_dialog.dart';
 
-// ── Floating-label model ──────────────────────────────────────────────────────
 class FloatingLabel {
   final String text;
   final Color  color;
@@ -19,10 +18,8 @@ class FloatingLabel {
       : id = DateTime.now().microsecondsSinceEpoch.toString();
 }
 
-// ── Controller ────────────────────────────────────────────────────────────────
 class ArithmeticController extends GetxController {
   final StorageService _storage = Get.find<StorageService>();
-
   late LevelConfig currentLevel;
 
   // ── Observable state ─────────────────────────────────────────────────────────
@@ -37,33 +34,34 @@ class ArithmeticController extends GetxController {
   final RxBool   comboActive       = false.obs;
   final RxString comboLabel        = ''.obs;
   final RxList<FloatingLabel> floatingLabels = <FloatingLabel>[].obs;
-  final RxInt    particleBurstTick = 0.obs;
+  final RxInt    particleBurstTick  = 0.obs;
+  final RxInt    wrongAnswerTick   = 0.obs;  // increments on every wrong answer → triggers shake + flash in view
+  final RxBool   isWrongFlashing   = false.obs; // true for 400 ms after wrong → resets automatically
   final RxBool   dangerState       = false.obs;
 
+  // ── ADAPTIVE PERFORMANCE CONTROLS ──────────────────────────────────────────
+  //  0 = Standard constraints from kLevels configuration array
+  // -1 = Alleviated Downgrade (Drastically simplifies values to relieve frustration)
+  //  1 = High Velocity Overdrive (Pushes numbers up if solving ultra-fast)
+  final RxInt dynamicDifficultyTier = 0.obs;
+  int _consecutiveWrongAnswers = 0;
+
   static const List<int> _comboMilestones = [3, 5, 10];
-
   DateTime?  _questionStartTime;
-
-  // ── Timer — using dart:async Timer, NOT Ticker ────────────────────────────────
-  // Ticker requires a live TickerProvider from the current widget tree.
-  // After Get.delete + Get.offNamed the old view's vsync is gone, causing
-  // the ticker to silently stall. A plain periodic Timer is immune to this.
   Timer? _timer;
   bool   _gameRunning = false;
 
-  // ── Lifecycle ─────────────────────────────────────────────────────────────────
   @override
   void onInit() {
     super.onInit();
-
     if (Get.arguments is LevelConfig) {
       currentLevel = Get.arguments as LevelConfig;
     } else {
       final saved = _storage.currentLevel.clamp(1, kLevels.length);
       currentLevel = kLevels[saved - 1];
     }
-
     timeLeft.value = currentLevel.timeLimitSeconds;
+    dynamicDifficultyTier.value = 0; // Initialize standard difficulty tier
     _generateEquation();
     _startTimer();
   }
@@ -74,7 +72,6 @@ class ArithmeticController extends GetxController {
     super.onClose();
   }
 
-  // ── Timer ─────────────────────────────────────────────────────────────────────
   void _startTimer() {
     _gameRunning = true;
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -96,13 +93,11 @@ class ArithmeticController extends GetxController {
     _timer = null;
   }
 
-  // ── Input ─────────────────────────────────────────────────────────────────────
   void onKeyTap(String key) {
     if (!_gameRunning) return;
     if (key == 'backspace') {
       if (userInput.value.isNotEmpty) {
-        userInput.value =
-            userInput.value.substring(0, userInput.value.length - 1);
+        userInput.value = userInput.value.substring(0, userInput.value.length - 1);
       }
     } else {
       if (userInput.value.length < 6) {
@@ -125,58 +120,80 @@ class ArithmeticController extends GetxController {
       _handleWrong();
     }
 
-    // Only generate a new equation if the round is still active.
     if (_gameRunning) {
       _generateEquation();
     }
   }
 
-  // ── Correct ───────────────────────────────────────────────────────────────────
+  // ── Correct Answer Handling with Dynamic Step-Up ───────────────────────────
   void _handleCorrect() {
     score.value++;
     streak.value++;
     questionsAnswered.value++;
+    _consecutiveWrongAnswers = 0; // Reset consecutive wrongs on success
 
-    progressTarget.value =
-        (questionsAnswered.value / currentLevel.questionsPerRound)
-            .clamp(0.0, 1.0);
-
+    progressTarget.value = (questionsAnswered.value / currentLevel.questionsPerRound).clamp(0.0, 1.0);
     particleBurstTick.value++;
-    _checkSpeedBonus();
+
+    int responseTimeMs = 9999;
+    if (_questionStartTime != null) {
+      responseTimeMs = DateTime.now().difference(_questionStartTime!).inMilliseconds;
+    }
+
+    _checkSpeedBonus(responseTimeMs);
     _checkCombo();
+
+    // ADAPTIVE UPGRADE LOGIC:
+    // If user solves 3 correct answers quickly in normal tier, increase difficulty bounds
+    if (streak.value >= 3 && responseTimeMs < 3000 && dynamicDifficultyTier.value == 0) {
+      dynamicDifficultyTier.value = 1;
+      _spawnFloating("⚡ Overdrive Mode! ⚡", const Color(0xFFFFB61D)); // Icon Yellow Pop
+    }
+    // Recovery check: if they were downgraded but score 2 correct in a row, restore normal level rules
+    else if (streak.value >= 2 && dynamicDifficultyTier.value == -1) {
+      dynamicDifficultyTier.value = 0;
+      _spawnFloating("👍 Recovered! Normal Mode", const Color(0xFF6AD7C5)); // Icon Mint Green
+    }
 
     if (questionsAnswered.value >= currentLevel.questionsPerRound) {
       _endGame(won: true, reason: 'levelComplete');
     }
   }
 
-  // ── Wrong ─────────────────────────────────────────────────────────────────────
+  // ── Wrong Answer Handling with Dynamic Downgrade ─────────────────────────────
   void _handleWrong() {
     streak.value      = 0;
     comboActive.value = false;
     comboLabel.value  = '';
     hearts.value      = (hearts.value - 1).clamp(0, 3);
     dangerState.value = hearts.value == 1;
+    _consecutiveWrongAnswers++;
+    wrongAnswerTick.value++;  // triggers WrongAnswerFlash + equation card shake
+    isWrongFlashing.value = true;
+    Future.delayed(const Duration(milliseconds: 400), () {
+      isWrongFlashing.value = false; // resets border/bg after flash completes
+    });
+
+    // ADAPTIVE DOWNGRADE LOGIC:
+    // Missing an answer triggers an immediate fallback downgrade to clear road blocks
+    if (dynamicDifficultyTier.value >= 0) {
+      dynamicDifficultyTier.value = -1;
+      _spawnFloating("🧠 Brainy Adjusted The Level!", const Color(0xFF68B2F4)); // Fresh Sky Blue
+    }
 
     if (hearts.value == 0) {
       _endGame(won: false, reason: 'noHearts');
     }
   }
 
-  // ── Speed bonus ───────────────────────────────────────────────────────────────
-  void _checkSpeedBonus() {
-    if (_questionStartTime == null) return;
-    final ms = DateTime.now().difference(_questionStartTime!).inMilliseconds;
+  void _checkSpeedBonus(int ms) {
     if (ms < 3000) {
       final text  = ms < 1500 ? '+10 XP ⚡' : '+5s ⚡';
-      final color = ms < 1500
-          ? const Color(0xFF00E676)
-          : const Color(0xFF40C4FF);
+      final color = ms < 1500 ? const Color(0xFF00E676) : const Color(0xFF40C4FF);
       _spawnFloating(text, color);
     }
   }
 
-  // ── Combo ─────────────────────────────────────────────────────────────────────
   void _checkCombo() {
     if (!_comboMilestones.contains(streak.value)) return;
     comboActive.value = true;
@@ -192,24 +209,59 @@ class ArithmeticController extends GetxController {
     });
   }
 
-  // ── Equation ──────────────────────────────────────────────────────────────────
+  // ── Equation Generation with Dynamic Payload Overrides ─────────────────────
   void _generateEquation() {
     _questionStartTime = DateTime.now();
-    // Pass the controller instance hashCode as a seed hint so back-to-back
-    // calls never return the same cached static value from the engine.
-    equation.value = EquationBuilder.generate(currentLevel);
+
+    LevelConfig adaptivePayload = currentLevel;
+
+    // Apply adaptive scaling parameters dynamically based on current player performance tier
+    if (dynamicDifficultyTier.value == -1) {
+      // Simplify operations to alleviate frustration instantly
+      int scaledMax = (currentLevel.maxOperand * 0.45).clamp(9, currentLevel.maxOperand).toInt();
+
+      adaptivePayload = LevelConfig(
+        levelNumber:       currentLevel.levelNumber,
+        label:             currentLevel.label,
+        timeLimitSeconds:  currentLevel.timeLimitSeconds,
+        questionsPerRound: currentLevel.questionsPerRound,
+        xpPerCorrect:      currentLevel.xpPerCorrect,
+        complexityPercent: currentLevel.complexityPercent,
+        allowedOps:        currentLevel.allowedOps,
+        maxOperand:        scaledMax, // Injecting downscaled operands safely
+        allowNegative:     false,     // Turn off negative parameters during recovery mode
+        allowDecimal:      false,     // Turn off confusing fractions
+      );
+    } else if (dynamicDifficultyTier.value == 1) {
+      // Push max limits slightly higher for advanced players
+      int scaledMax = (currentLevel.maxOperand * 1.35).toInt();
+
+      adaptivePayload = LevelConfig(
+        levelNumber:       currentLevel.levelNumber,
+        label:             currentLevel.label,
+        timeLimitSeconds:  currentLevel.timeLimitSeconds,
+        questionsPerRound: currentLevel.questionsPerRound,
+        xpPerCorrect:      currentLevel.xpPerCorrect + 4, // Give higher score payout rules
+        complexityPercent: currentLevel.complexityPercent,
+        allowedOps:        currentLevel.allowedOps,
+        maxOperand:        scaledMax,
+        allowNegative:     currentLevel.allowNegative,
+        allowDecimal:      currentLevel.allowDecimal,
+      );
+    }
+
+    // Pass the safe configuration copy to the EquationBuilder
+    equation.value = EquationBuilder.generate(adaptivePayload);
   }
 
   bool _checkAnswer(int answer) => AnswerChecker.check(equation.value, answer);
 
-  // ── End game ──────────────────────────────────────────────────────────────────
   void _endGame({required bool won, required String reason}) {
     if (!_gameRunning) return;
     _stopTimer();
 
     final xpGained        = score.value * currentLevel.xpPerCorrect;
-    final nextLevelNumber = (currentLevel.levelNumber + (won ? 1 : 0))
-        .clamp(1, kLevels.length);
+    final nextLevelNumber = (currentLevel.levelNumber + (won ? 1 : 0)).clamp(1, kLevels.length);
 
     _storage.saveSession(
       level: nextLevelNumber,
@@ -237,40 +289,20 @@ class ArithmeticController extends GetxController {
   }
 
   void loadNextLevel(LevelConfig nextLevel) {
-
     currentLevel = nextLevel;
-
-    // Reset gameplay state
-
     userInput.value = '';
-
     questionsAnswered.value = 0;
-
     streak.value = 0;
-
     progressTarget.value = 0;
-
     comboActive.value = false;
-
     dangerState.value = false;
-
-    // Reset timer
-
+    dynamicDifficultyTier.value = 0; // Safely clean status modifiers for next stage
     timeLeft.value = currentLevel.timeLimitSeconds;
-
-    // Generate first equation
-
     _generateEquation();
-
-    // Restart timer
-
     _timer?.cancel();
-
     _startTimer();
-
   }
 
-  // ── Quit ──────────────────────────────────────────────────────────────────────
   void quitGame() {
     _stopTimer();
     Get.offAllNamed(Routes.dashboard);

@@ -199,13 +199,23 @@ class _DefeatDialogState extends State<DefeatDialog>
                                 borderRadius:
                                 BorderRadius.circular(AppTheme.radiusKey),
                                 onTap: () {
+                                  // 1. Close the open defeat dialog overlay instantly
                                   Get.back();
-                                  Get.delete<ArithmeticController>(force: true);
-                                  Get.off(
-                                        () => const ArithmeticChallengeView(),
-                                    binding: GameBinding(),
-                                    arguments: widget.currentLevel,
-                                  );
+
+                                  // 2. Find the active controller in memory and reset the level parameters safely
+                                  if (Get.isRegistered<ArithmeticController>()) {
+                                    final controller = Get.find<ArithmeticController>();
+
+                                    // This resets hearts, score, input state, timers, and loads a fresh equation
+                                    controller.loadNextLevel(widget.currentLevel);
+                                  } else {
+                                    // Fallback: If instance is missing, fallback to your hard-reload architecture
+                                    Get.off(
+                                          () => const ArithmeticChallengeView(),
+                                      binding: GameBinding(),
+                                      arguments: widget.currentLevel,
+                                    );
+                                  }
                                 },
                                 child: Padding(
                                   padding:
