@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "661869750714",
+    "project_id": "flexiarithmetic",
+    "storage_bucket": "flexiarithmetic.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:661869750714:android:ea504a5dcc93105e425583",
+        "android_client_info": {
+          "package_name": "com.sothearath.flexi_arithmetic"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCniJUwTpLdtEM3etoO9EuOgeD03lYwYgU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

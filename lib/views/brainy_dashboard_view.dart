@@ -146,38 +146,51 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
           children: [
             Icon(icon, color: AppColors.cobalt, size: 14),
             const SizedBox(height: 4),
-            RichText(
-              text: TextSpan(children: [
-                TextSpan(
-                  text: value,
-                  style: GoogleFonts.nunito(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.cobalt,
-                    height: 1,
+            // Wrap in Row so the unit shrinks before value clips
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Flexible(
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.nunito(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.cobalt,
+                      height: 1,
+                    ),
                   ),
                 ),
-                TextSpan(
-                  text: ' $unit',
+                Text(
+                  ' $unit',
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
                   style: GoogleFonts.nunito(
                     fontSize: 11,
                     color: AppColors.cobalt.withOpacity(0.60),
                   ),
                 ),
-              ]),
+              ],
             ),
             const SizedBox(height: 2),
-            Text(label,
-                style: GoogleFonts.nunito(
-                    fontSize: 9,
-                    color: AppColors.mutedOnGrad)),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.nunito(
+                  fontSize: 9,
+                  color: AppColors.mutedOnGrad),
+            ),
           ],
         ),
       );
 
   // Settings — frosted-glass icon button matching _iconButton() in challenge view.
   Widget _settingsButton() => GestureDetector(
-    onTap: () {/* open settings */},
+    onTap: () {Get.toNamed(Routes.profile);},
     child: Container(
       width: 44,
       height: 44,
@@ -280,7 +293,16 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
               ),
             ),
           ),
-          const SizedBox(height: 4),
+          // Ground shadow — soft oval beneath feet anchors Brainy to the card
+          Container(
+            width: 72,
+            height: 10,
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.12),
+              borderRadius: const BorderRadius.all(Radius.elliptical(72, 10)),
+            ),
+          ),
+          const SizedBox(height: 6),
           Text(
             'BRAINY',
             style: GoogleFonts.nunito(
@@ -455,20 +477,34 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
   Widget _miniStat(String title, String value, String sub) => Expanded(
     child: Column(
       children: [
-        Text(title,
-            style: GoogleFonts.nunito(
-                fontSize: 10,
-                color: AppColors.cobalt.withOpacity(0.45))),
-        const SizedBox(height: 4),
-        Text(value,
-            style: GoogleFonts.nunito(
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                color: AppColors.cobalt)),
-        Text(sub,
-            style: GoogleFonts.nunito(
-                fontSize: 10,
-                color: AppColors.cobalt.withOpacity(0.40))),
+        Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.nunito(
+              fontSize: 10,
+              color: AppColors.cobalt.withOpacity(0.45)),
+        ),
+        const SizedBox(height: 6),
+        // Bumped 18 → 22px, stays w900 (Nunito max weight)
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.nunito(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: AppColors.cobalt,
+              letterSpacing: -0.5),
+        ),
+        Text(
+          sub,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.nunito(
+              fontSize: 10,
+              color: AppColors.cobalt.withOpacity(0.40)),
+        ),
       ],
     ),
   );
@@ -490,11 +526,16 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
             Icon(Icons.star_rounded,
                 color: AppColors.sunflower, size: 20),
             const SizedBox(height: 2),
-            Text('$topScore/28',
-                style: GoogleFonts.nunito(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.sunflower)),
+            Text(
+              '$topScore/28',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.nunito(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.sunflower,
+                  letterSpacing: -0.5),
+            ),
             Text('top score',
                 style: GoogleFonts.nunito(
                     fontSize: 9,

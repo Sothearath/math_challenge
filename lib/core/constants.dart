@@ -30,12 +30,21 @@ abstract class Routes {
   static const dailyChallenge = '/daily-challenge';
   static const awards         = '/awards';
   static const settings       = '/settings';
+  static const onboarding    = '/onboarding';
+  static const profile       = '/profile';
+  static const username      = 'username';
+  static const onboardingDone = 'onboarding_done';
+
 }
 
 // ─── Storage keys ─────────────────────────────────────────────────────────────
 
 abstract class StorageKeys {
   StorageKeys._();
+
+  // Onboarding
+  static const username      = 'username';
+  static const onboardingDone = 'onboarding_done';
 
   // Game progress
   static const currentLevel      = 'current_level';

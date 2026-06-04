@@ -1,6 +1,8 @@
 // lib/features/game/controllers/arithmetic_controller.dart
 
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/constants.dart';
@@ -261,14 +263,25 @@ class ArithmeticController extends GetxController {
     _stopTimer();
 
     final xpGained        = score.value * currentLevel.xpPerCorrect;
-    final nextLevelNumber = (currentLevel.levelNumber + (won ? 1 : 0)).clamp(1, kLevels.length);
+    final nextLevelNumber = (currentLevel.levelNumber + (won ? 1 : 0))
+        .clamp(1, kLevels.length);
 
+    // ── Local persistence (always) ────────────────────────────────────────
     _storage.saveSession(
       level: nextLevelNumber,
       score: score.value,
       xp:    xpGained,
     );
 
+    // ── Firestore sync (best-effort, non-blocking) ────────────────────────
+    _syncSessionToFirestore(
+      xpGained:        xpGained,
+      sessionScore:    score.value,
+      nextLevelNumber: nextLevelNumber,
+      won:             won,
+    );
+
+    // ── Show dialog after short delay ─────────────────────────────────────
     Future.delayed(const Duration(milliseconds: 400), () {
       if (won) {
         Get.dialog(
@@ -286,6 +299,51 @@ class ArithmeticController extends GetxController {
         );
       }
     });
+  }
+
+  // ── Firestore session sync ────────────────────────────────────────────────
+  // Runs independently of the dialog flow — a failure here never blocks the
+  // player from seeing their result screen.
+  Future<void> _syncSessionToFirestore({
+    required int xpGained,
+    required int sessionScore,
+    required int nextLevelNumber,
+    required bool won,
+  }) async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return; // Not signed in — skip silently
+
+      final userRef = FirebaseFirestore.instance.collection('users').doc(uid);
+
+      // Read current high score from Firestore to compare
+      final snap = await userRef.get();
+      final currentHighScore = snap.data()?['highScore'] as int? ?? 0;
+
+      final Map<String, dynamic> updates = {
+        // Always increment XP
+        'totalXP':      FieldValue.increment(xpGained),
+        // Always update lastActiveAt
+        'lastActiveAt': FieldValue.serverTimestamp(),
+      };
+
+      // Only advance currentLevel on a win
+      if (won) {
+        updates['currentLevel'] = nextLevelNumber;
+      }
+
+      // Only overwrite highScore if this session beat the record
+      if (sessionScore > currentHighScore) {
+        updates['highScore'] = sessionScore;
+      }
+
+      await userRef.update(updates);
+    } on FirebaseException catch (e) {
+      // Log silently — never surface Firestore errors to the game UI
+      debugPrint('[ArithmeticController] Firestore sync failed: ${e.message}');
+    } catch (e) {
+      debugPrint('[ArithmeticController] Unexpected sync error: $e');
+    }
   }
 
   void loadNextLevel(LevelConfig nextLevel) {
@@ -306,5 +364,26 @@ class ArithmeticController extends GetxController {
   void quitGame() {
     _stopTimer();
     Get.offAllNamed(Routes.dashboard);
+  }
+
+  // ── Public: called by VictoryDialog "Next Level" button ───────────────────
+  // Writes the new level to Firestore immediately — before Get.off() destroys
+  // this controller instance. Fire-and-forget so navigation is never delayed.
+  Future<void> updateLevelOnFirestore(int newLevelNumber) async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .update({
+        'currentLevel': newLevelNumber,
+        'lastActiveAt': FieldValue.serverTimestamp(),
+      });
+    } on FirebaseException catch (e) {
+      debugPrint('[ArithmeticController] updateLevel failed: ${e.message}');
+    } catch (e) {
+      debugPrint('[ArithmeticController] updateLevel error: $e');
+    }
   }
 }

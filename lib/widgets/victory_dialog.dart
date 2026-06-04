@@ -209,7 +209,9 @@ class _VictoryDialogState extends State<VictoryDialog>
                           // Dashboard — outlined mint
                           Expanded(
                             child: OutlinedButton(
-                              onPressed: () {
+                              onPressed: () async {
+                                final controller = Get.find<ArithmeticController>();
+                                await controller.updateLevelOnFirestore(widget.nextLevel.levelNumber);
                                 Get.back();
                                 Get.offAllNamed(Routes.dashboard);
                               },
@@ -258,7 +260,7 @@ class _VictoryDialogState extends State<VictoryDialog>
                                 child: InkWell(
                                   borderRadius:
                                   BorderRadius.circular(AppTheme.radiusKey),
-                                  onTap: () {
+                                  onTap: () async {
                                     // First, safely close the open overlay alert dialog container
                                     Get.back();
 
@@ -268,6 +270,7 @@ class _VictoryDialogState extends State<VictoryDialog>
 
                                       // Call the optimized recycler method we added to update parameters
                                       controller.loadNextLevel(widget.nextLevel);
+                                      await controller.updateLevelOnFirestore(widget.nextLevel.levelNumber);
                                     } else {
                                       // Fallback: If for any reason the instance is missing, use your original hard reload pipeline[cite: 4]
                                       Get.off(

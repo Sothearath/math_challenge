@@ -321,7 +321,7 @@ class ArithmeticChallengeView extends GetView<ArithmeticController> {
     );
   }
 
-  // ── Answer field ──────────────────────────────────────────────────────────────
+// ── Answer field ──────────────────────────────────────────────────────────────
   Widget _buildAnswerField() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
@@ -348,18 +348,34 @@ class ArithmeticChallengeView extends GetView<ArithmeticController> {
           ),
           child: Row(
             children: [
-              const _BlinkingCursor(),
-              const SizedBox(width: 6),
               Expanded(
-                child: Text(
-                  hasInput ? controller.userInput.value : 'Type your answer',
-                  style: GoogleFonts.nunito(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: hasInput
-                        ? AppColors.cobalt
-                        : AppColors.cobalt.withOpacity(0.30),
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min, // Forces the row to wrap tightly around the text content
+                  children: [
+                    // 1. If there is no input, place the blinking cursor first
+                    if (!hasInput) ...[
+                      const _BlinkingCursor(),
+                      const SizedBox(width: 6),
+                    ],
+
+                    // 2. The main answer input display text string
+                    Text(
+                      hasInput ? controller.userInput.value : 'Type your answer',
+                      style: GoogleFonts.nunito(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: hasInput
+                            ? AppColors.cobalt
+                            : AppColors.cobalt.withOpacity(0.30),
+                      ),
+                    ),
+
+                    // 3. If there is input typed, attach the blinking cursor right after the final digit
+                    if (hasInput) ...[
+                      const SizedBox(width: 4),
+                      const _BlinkingCursor(),
+                    ],
+                  ],
                 ),
               ),
             ],
