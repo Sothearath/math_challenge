@@ -362,10 +362,10 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
           Obx(() => Row(
             children: [
               _miniStat('Avg accuracy',
-                  '${_ctrl.avgAccuracy.value}/28', 'equations'),
+                  '${_ctrl.avgAccuracy.value}', 'equations'),
               _starStat(_ctrl.topScore.value),
               _miniStat('Latest session',
-                  '${_ctrl.latestSession.value}/28', 'correct'),
+                  '${_ctrl.latestSession.value}', 'correct'),
             ],
           )),
         ],
@@ -527,7 +527,7 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
                 color: AppColors.sunflower, size: 20),
             const SizedBox(height: 2),
             Text(
-              '$topScore/28',
+              '$topScore',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.nunito(

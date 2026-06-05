@@ -8,6 +8,7 @@ import 'package:get/get.dart';
 import '../../../core/constants.dart';
 import '../../../core/utils/equation_builder.dart';
 import '../models/level_config.dart';
+import '../services/ad_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/victory_dialog.dart';
 import '../widgets/defeat_dialog.dart';
@@ -22,6 +23,7 @@ class FloatingLabel {
 
 class ArithmeticController extends GetxController {
   final StorageService _storage = Get.find<StorageService>();
+  final AdService _adService = AdService();
   late LevelConfig currentLevel;
 
   // ── Observable state ─────────────────────────────────────────────────────────
@@ -64,6 +66,9 @@ class ArithmeticController extends GetxController {
     }
     timeLeft.value = currentLevel.timeLimitSeconds;
     dynamicDifficultyTier.value = 0; // Initialize standard difficulty tier
+
+    _adService.loadRewardedAd(); // 🌟 1. Pre-fetch the ad early so it's ready!
+
     _generateEquation();
     _startTimer();
   }
@@ -183,9 +188,63 @@ class ArithmeticController extends GetxController {
       _spawnFloating("🧠 Brainy Adjusted The Level!", const Color(0xFF68B2F4)); // Fresh Sky Blue
     }
 
+    // 🌟 2. Intercept Out of Hearts condition
     if (hearts.value == 0) {
-      _endGame(won: false, reason: 'noHearts');
+      _handleOutOfHearts();
     }
+    // if (hearts.value == 0) {
+    //   _endGame(won: false, reason: 'noHearts');
+    // }
+  }
+
+  /// Handles checking for ad availability before executing standard Game Over protocols
+  void _handleOutOfHearts() {
+    _stopTimer(); // Pause the countdown while the user deals with ad flows
+
+    // Show a dialog box asking if they want to watch an ad for a second chance
+    Get.dialog(
+      AlertDialog(
+        title: const Text('💡 Out of Hearts!', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text('Watch a quick video to restore 1 Heart and keep your streak alive?'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Get.back(); // Close this choice alert
+              _endGame(won: false, reason: 'noHearts'); // Reject ad -> Trigger Game Over
+            },
+            child: const Text('No, Quit', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back(); // Close this choice alert
+
+              // 🌟 3. Trigger the AdMob Video Player
+              _adService.showRewardedAd(
+                onRewardEarned: () {
+                  // Reward path: Add a heart back and keep playing!
+                  hearts.value = 1;
+                  dangerState.value = true;
+                  _spawnFloating("❤️ Extra Life Granted!", const Color(0xFFFF5252));
+                },
+                onAdClosedOrFailed: () {
+                  // After ad finishes (or if it fails to load), resume engine state
+                  _startTimer();
+                  if (hearts.value == 0) {
+                    // If they closed the ad early without watching completely, trigger loss
+                    _endGame(won: false, reason: 'noHearts');
+                  } else {
+                    // If they watched successfully, generate a fresh math problem to keep going
+                    _generateEquation();
+                  }
+                },
+              );
+            },
+            child: const Text('Watch Video 🎬'),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
   }
 
   void _checkSpeedBonus(int ms) {

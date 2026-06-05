@@ -40,7 +40,7 @@ class ProfileView extends GetView<ProfileController> {
                         const SizedBox(height: 16),
                         _buildStatGrid(),
                         const SizedBox(height: 24),
-                        _buildSignOutButton(),
+                        // _buildSignOutButton(),
                       ],
                     ),
                   ),

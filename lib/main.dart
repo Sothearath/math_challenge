@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:math_challenge/services/auth_service.dart';
 import 'package:math_challenge/services/storage_service.dart';
 import 'package:math_challenge/views/arithmetic_challenge_view.dart';
@@ -17,6 +18,7 @@ import 'package:math_challenge/views/profile/profile_binding.dart';
 import 'package:math_challenge/views/profile/profile_view.dart';
 import 'bindings/app_bindings.dart';
 import 'controllers/daily_challenge_view.dart';
+import 'core/ad_config/ad_config_binding.dart';
 import 'core/constants.dart';
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
@@ -32,15 +34,13 @@ Future<void> main() async {
   ]);
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
+  await initRemoteConfig();
   // Initialise storage before any controller reads it
   await StorageService.init();
-
+  MobileAds.instance.initialize();
   Get.put<StorageService>(StorageService(), permanent: true);
   await Get.putAsync<AuthService>(
-
         () async => await AuthService().init(),
-
     permanent: true,
 
   );

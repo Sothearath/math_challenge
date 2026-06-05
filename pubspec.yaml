@@ -43,6 +43,8 @@ dependencies:
   cloud_firestore: ^6.5.0
   firebase_core: ^4.10.0
   firebase_auth: ^6.5.2
+  google_mobile_ads: ^8.0.0
+  firebase_remote_config: ^6.5.2
 
 dev_dependencies:
   flutter_test:
