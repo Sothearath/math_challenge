@@ -7,12 +7,15 @@
 
 import 'package:get/get.dart';
 
+import '../models/level_config.dart';
 import '../services/storage_service.dart';
 
 class DashboardController extends GetxController {
   final StorageService _storage = Get.find<StorageService>();
 
   // ── Observable state ────────────────────────────────────────────────────────
+  final RxInt currentLevel = 1.obs;
+  final RxInt complexityPercent = 5.obs; // Recommended Level 1 starting baseline
 
   /// Current weekly streak count (days completed this week).
   final RxInt weekStreak = 0.obs;
@@ -47,7 +50,21 @@ class DashboardController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _loadPersisted();
+    refreshStats();
+  }
+
+  /// Looks up the saved level and maps the configuration parameters dynamically
+  void refreshLevelMetrics() {
+    // 1. Fetch the user's current saved level index from storage
+    // (Assuming your storage uses a key property like .currentLevel or similar getter)
+    final savedLevelIndex = _storage.currentLevel.clamp(1, kLevels.length);
+    currentLevel.value = savedLevelIndex;
+
+    // 2. Fetch the blueprint corresponding to this level from your LevelConfig array
+    final LevelConfig activeConfig = kLevels[savedLevelIndex - 1];
+
+    // 3. Update the complexity percentage seamlessly from the config file rule
+    complexityPercent.value = activeConfig.complexityPercent;
   }
 
   void _loadPersisted() {
@@ -58,5 +75,8 @@ class DashboardController extends GetxController {
   }
 
   /// Call this after a session completes to refresh the dashboard stats.
-  void refreshStats() => _loadPersisted();
+  void refreshStats() {
+    _loadPersisted();
+    refreshLevelMetrics();
+  }
 }

@@ -89,33 +89,33 @@ class ProfileView extends GetView<ProfileController> {
           ),
 
           // Edit / Done toggle
-          Obx(() => GestureDetector(
-            onTap: controller.toggleEdit,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: controller.isEditing.value
-                    ? AppColors.cobalt
-                    : Colors.white.withOpacity(0.30),
-                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                border: Border.all(
-                  color: controller.isEditing.value
-                      ? AppColors.cobaltDark
-                      : Colors.white.withOpacity(0.55),
-                ),
-              ),
-              child: Text(
-                controller.isEditing.value ? 'Done' : 'Edit',
-                style: GoogleFonts.nunito(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: controller.isEditing.value
-                      ? Colors.white
-                      : AppColors.cobalt,
-                ),
-              ),
-            ),
-          )),
+          // Obx(() => GestureDetector(
+          //   onTap: controller.toggleEdit,
+          //   child: Container(
+          //     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          //     decoration: BoxDecoration(
+          //       color: controller.isEditing.value
+          //           ? AppColors.cobalt
+          //           : Colors.white.withOpacity(0.30),
+          //       borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+          //       border: Border.all(
+          //         color: controller.isEditing.value
+          //             ? AppColors.cobaltDark
+          //             : Colors.white.withOpacity(0.55),
+          //       ),
+          //     ),
+          //     child: Text(
+          //       controller.isEditing.value ? 'Done' : 'Edit',
+          //       style: GoogleFonts.nunito(
+          //         fontSize: 13,
+          //         fontWeight: FontWeight.w800,
+          //         color: controller.isEditing.value
+          //             ? Colors.white
+          //             : AppColors.cobalt,
+          //       ),
+          //     ),
+          //   ),
+          // )),
         ],
       ),
     );

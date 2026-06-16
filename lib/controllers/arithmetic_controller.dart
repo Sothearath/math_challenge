@@ -189,12 +189,12 @@ class ArithmeticController extends GetxController {
     }
 
     // 🌟 2. Intercept Out of Hearts condition
-    if (hearts.value == 0) {
-      _handleOutOfHearts();
-    }
     // if (hearts.value == 0) {
-    //   _endGame(won: false, reason: 'noHearts');
+    //   _handleOutOfHearts();
     // }
+    if (hearts.value == 0) {
+      _endGame(won: false, reason: 'noHearts');
+    }
   }
 
   /// Handles checking for ad availability before executing standard Game Over protocols

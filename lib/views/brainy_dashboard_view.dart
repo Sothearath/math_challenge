@@ -8,6 +8,7 @@ import '../controllers/dashboard_controller.dart';
 import '../../../core/constants.dart';
 import '../theme/app_theme.dart';
 import '../widgets/brainy_painter.dart';
+import 'daily_challenge/daily_challenge_controller.dart';
 
 class BrainyDashboardView extends StatefulWidget {
   const BrainyDashboardView({super.key});
@@ -20,6 +21,7 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
     with TickerProviderStateMixin {
 
   late final DashboardController _ctrl;
+  late final DailyChallengeController _dailyCtrl;
   late final AnimationController _bobCtrl;
   late final Animation<double>   _bobAnim;
   late final AnimationController _pulseCtrl;
@@ -30,6 +32,7 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
   void initState() {
     super.initState();
     _ctrl = Get.find<DashboardController>();
+    _dailyCtrl = Get.find<DailyChallengeController>();
 
     _bobCtrl = AnimationController(
       vsync: this,
@@ -85,6 +88,8 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
                 const SizedBox(height: 16),
                 _buildProgressCard(),
                 const SizedBox(height: 20),
+                _buildDailyChallengeCard(context),
+                const SizedBox(height: 20),
                 _buildBeginButton(),
                 const SizedBox(height: 24),
               ],
@@ -96,6 +101,9 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
   }
 
   // ── Stats bar ─────────────────────────────────────────────────────────────────
+  // Same frosted-glass pill style as ArithmeticChallengeView._pill().
+  // lib/features/dashboard/views/brainy_dashboard_view.dart
+// ── Stats bar ─────────────────────────────────────────────────────────────────
   // Same frosted-glass pill style as ArithmeticChallengeView._pill().
   Widget _buildStatsBar() {
     return Obx(() => Row(
@@ -109,7 +117,7 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
         const SizedBox(width: 8),
         Expanded(child: _statPill(
           icon: Icons.bar_chart_rounded,
-          value: '25',
+          value: '${_ctrl.complexityPercent.value}', // ⭐ Dynamically updates instead of fixed '25'
           unit: '%',
           label: 'Complexity',
         )),
@@ -125,6 +133,8 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
       ],
     ));
   }
+
+
 
   // Frosted-glass pill — white @ 28% fill + white @ 55% border,
   // exactly matching the challenge view's _pill() container style.
@@ -546,6 +556,113 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
     ),
   );
 
+  // ── Daily Challenge card ─────────────────────────────────────────────────────
+  // Premium gold/orange CTA above the Begin Challenge button.
+  // Active  → orange/gold gradient, tappable, navigates with daily config.
+  // Locked  → dimmed grey, checkmark icon, onTap: null.
+  Widget _buildDailyChallengeCard(BuildContext context) {
+    return Obx(() {
+      // While the lockout check is in-flight, render nothing — avoids a
+      // flash of the "active" card before we know the real status.
+      if (_dailyCtrl.isLoading.value) {
+        return const SizedBox(height: 0);
+      }
+
+      final played = _dailyCtrl.hasPlayedToday.value;
+
+      return GestureDetector(
+        onTap: () {
+          if (!played) {
+            // 🟢 Normal Flow: Play the challenge
+            Get.toNamed(
+              Routes.game,
+              arguments: _dailyCtrl.challengeConfig,
+            )?.then((_) => _ctrl.refreshStats());
+          } else {
+            // 🔴 Locked Flow: Determine if they won or failed to offer a Second Chance
+            _handleLockedCardTap(context);
+          }
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          decoration: BoxDecoration(
+            // Active: bright orange/gold premium gradient.
+            // Locked: flat dimmed grey, no gradient.
+            gradient: played
+                ? null
+                : const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFFFB74D), Color(0xFFFF9800)],
+            ),
+            color: played ? Colors.white.withOpacity(0.35) : null,
+            borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+            border: played
+                ? Border.all(color: Colors.white.withOpacity(0.50))
+                : null,
+            boxShadow: played
+                ? null
+                : [
+              BoxShadow(
+                color: const Color(0xFFFF9800).withOpacity(0.40),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // Leading icon — emoji for active, checkmark circle for locked
+              if (played)
+                const Icon(Icons.check_circle_rounded,
+                    color: AppColors.cobalt, size: 32)
+              else
+                const Text('📆', style: TextStyle(fontSize: 28)),
+              const SizedBox(width: 14),
+
+              // Title + subtitle
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Daily Challenge',
+                      style: GoogleFonts.nunito(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: played ? AppColors.cobalt : Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      played
+                          ? 'Come back tomorrow! 🎉'
+                          : 'Earn +100 Bonus XP Points!',
+                      style: GoogleFonts.nunito(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: played
+                            ? AppColors.cobalt.withOpacity(0.55)
+                            : Colors.white.withOpacity(0.92),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Trailing chevron — only on active state
+              if (!played)
+                const Icon(Icons.chevron_right_rounded,
+                    color: Colors.white, size: 26),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
   // ── Begin Challenge — cobalt gradient button matching _SubmitKey style ─────────
   Widget _buildBeginButton() {
     return AnimatedBuilder(
@@ -591,7 +708,13 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
             borderRadius: BorderRadius.circular(AppTheme.radiusButton),
             child: InkWell(
               borderRadius: BorderRadius.circular(AppTheme.radiusButton),
-              onTap: () => Get.toNamed(Routes.game),
+              onTap: () {
+                // Navigate to the game screen, then refresh metrics when they return!
+                Get.toNamed(Routes.game)?.then((_) {
+                  _ctrl.refreshStats();        // Updates stats like weekly streak & scores
+                  _ctrl.refreshLevelMetrics();   // Updates Level and Complexity percent visually
+                });
+              },
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -611,6 +734,74 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _handleLockedCardTap(BuildContext context) {
+    // Assuming your storage or controller tracks whether today was a clean win
+    // For now, if they are locked out, let's see if they want a revive:
+    final bool outOfHearts = !_dailyCtrl.wasChallengePerfectWin.value;
+
+    if (outOfHearts) {
+      _showSecondChanceDialog(context);
+    } else {
+      // Clean Win feedback
+      Get.snackbar(
+        'Completed! 🎉',
+        'You nailed today\'s challenge! Come back at midnight for a brand new board.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.cobalt.withOpacity(0.9),
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+      );
+    }
+  }
+
+  void _showSecondChanceDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
+        title: Text(
+          '💔 Out of Hearts!',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.nunito(fontWeight: FontWeight.w900, color: AppColors.cobalt),
+        ),
+        content: Text(
+          'Don\'t break your training streak! Watch a quick video to get 1 extra heart and try today\'s challenge again.',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.nunito(color: AppColors.cobalt.withOpacity(0.7)),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+             onPressed: () { Get.back() ;},
+            child: Text('Maybe later', style: GoogleFonts.nunito(color: Colors.grey)),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.sunflower,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusButton)),
+            ),
+
+            icon: const Icon(Icons.play_circle_filled_rounded, color: AppColors.cobalt),
+            label: Text(
+              'Watch Ad',
+              style: GoogleFonts.nunito(fontWeight: FontWeight.w900, color: AppColors.cobalt),
+            ), onPressed: () {
+            Get.back();
+            // ⭐ Trigger Ad Engine / Reward validation here
+            _dailyCtrl.grantSecondChanceChance();
+
+            // Reroute back into the game loop using the exact same configuration seed
+            Get.toNamed(
+              Routes.game,
+              arguments: _dailyCtrl.challengeConfig,
+            )?.then((_) => _ctrl.refreshStats());
+          },
+          ),
+        ],
       ),
     );
   }

@@ -5,7 +5,6 @@
 
 import 'package:get/get.dart';
 import '../controllers/arithmetic_controller.dart';
-import '../controllers/daily_challenge_controller.dart';
 import '../controllers/dashboard_controller.dart';
 import '../controllers/theme_controller.dart';
 import '../controllers/streak_controller.dart';
@@ -31,7 +30,6 @@ class DashboardBinding extends Bindings {
   @override
   void dependencies() {
     Get.lazyPut(() => DashboardController());
-    Get.lazyPut(() => DailyChallengeController());
   }
 }
 

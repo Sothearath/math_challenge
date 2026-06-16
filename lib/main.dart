@@ -10,6 +10,7 @@ import 'package:math_challenge/services/storage_service.dart';
 import 'package:math_challenge/views/arithmetic_challenge_view.dart';
 import 'package:math_challenge/views/awards_view.dart';
 import 'package:math_challenge/views/brainy_dashboard_view.dart';
+import 'package:math_challenge/views/daily_challenge/daily_challenge_binding.dart';
 import 'package:math_challenge/views/game_map_view.dart';
 import 'package:math_challenge/views/level_map_view.dart';
 import 'package:math_challenge/views/onboarding/onboarding_binding.dart';
@@ -17,12 +18,10 @@ import 'package:math_challenge/views/onboarding/onboarding_view.dart';
 import 'package:math_challenge/views/profile/profile_binding.dart';
 import 'package:math_challenge/views/profile/profile_view.dart';
 import 'bindings/app_bindings.dart';
-import 'controllers/daily_challenge_view.dart';
 import 'core/ad_config/ad_config_binding.dart';
 import 'core/constants.dart';
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
-import 'views/game_view.dart';
 import 'views/result_view.dart';
 
 Future<void> main() async {
@@ -74,12 +73,12 @@ class MathChallengeApp extends StatelessWidget {
         GetPage(
           name:    Routes.dashboard,
           page:    () => const BrainyDashboardView(),
-          binding: DashboardBinding(),
+          bindings: [DashboardBinding(), DailyChallengeBinding()],
         ),
         GetPage(
           name:    Routes.game,
           page:    () => const ArithmeticChallengeView(),
-          binding: GameBinding(),
+          bindings: [GameBinding(), DailyChallengeBinding()],
         ),
         GetPage(
           name:    Routes.result,
@@ -92,10 +91,6 @@ class MathChallengeApp extends StatelessWidget {
         GetPage(
           name:    Routes.gameMap,
           page:    () => const GameMapView(),
-        ),
-        GetPage(
-          name:    Routes.dailyChallenge,
-          page:    () => const DailyChallengeTabView(),
         ),
         GetPage(
           name:    Routes.awards,
