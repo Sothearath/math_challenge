@@ -83,6 +83,8 @@ class _VictoryDialogState extends State<VictoryDialog>
 
   @override
   Widget build(BuildContext context) {
+    final isDailyChallenge = widget.nextLevel.levelNumber == -1; // Matches our redirect configuration sentinel
+
     return FadeTransition(
       opacity: _fadeAnim,
       child: ScaleTransition(
@@ -134,9 +136,9 @@ class _VictoryDialogState extends State<VictoryDialog>
                       ),
                       const SizedBox(height: 16),
 
-                      // Headline — cobalt on gradient
+                      // ── Update Headline text dynamically ──
                       Text(
-                        'Level Unlocked! 🎉',
+                        isDailyChallenge ? 'Challenge Conquered! 🏆' : 'Level Unlocked! 🎉',
                         style: GoogleFonts.nunito(
                           fontSize: 24,
                           fontWeight: FontWeight.w900,
@@ -146,19 +148,18 @@ class _VictoryDialogState extends State<VictoryDialog>
                       ),
                       const SizedBox(height: 8),
 
-                      // Complexity badge — frosted glass pill
+                      // ── Update Complexity description dynamically ──
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.30),
-                          borderRadius:
-                          BorderRadius.circular(AppTheme.radiusBadge),
-                          border: Border.all(
-                              color: Colors.white.withOpacity(0.55)),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusBadge),
+                          border: Border.all(color: Colors.white.withOpacity(0.55)),
                         ),
                         child: Text(
-                          'Complexity increased to ${widget.newComplexity}%',
+                          isDailyChallenge
+                              ? 'Perfect clear recorded for today!'
+                              : 'Complexity increased to ${widget.newComplexity}%',
                           style: GoogleFonts.nunito(
                             fontSize: 12,
                             color: AppColors.cobalt,
@@ -202,49 +203,40 @@ class _VictoryDialogState extends State<VictoryDialog>
                       ),
                       const SizedBox(height: 28),
 
-                      // Buttons row
+                      // ... scroll down to Row of buttons ...
                       Row(
                         children: [
-
-                          // Dashboard — outlined mint
+                          // Dashboard Button — Handles both paths cleanly
                           Expanded(
                             child: OutlinedButton(
-                              onPressed: () async {
-                                final controller = Get.find<ArithmeticController>();
-                                await controller.updateLevelOnFirestore(widget.nextLevel.levelNumber);
-                                Get.back();
-                                Get.offAllNamed(Routes.dashboard);
-                              },
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.mintDim,
-                                side: BorderSide(
-                                    color: AppColors.darkDivider, width: 1.5),
-                                padding:
-                                const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                        AppTheme.radiusKey)),
-                              ),
-                              child: Text('Dashboard',
-                                  style: GoogleFonts.nunito(
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.mintDim)),
+                                onPressed: () async {
+                                  Get.back(); // Dismiss dialog overlay frame
+
+                                  if (!isDailyChallenge) {
+                                    // Only push standard level indices to Firestore profile schema
+                                    final controller = Get.find<ArithmeticController>();
+                                    await controller.updateLevelOnFirestore(widget.nextLevel.levelNumber);
+                                  }
+
+                                  Get.offAllNamed(Routes.dashboard);
+                                },
+                                child: Text('Back', style: GoogleFonts.nunito(fontWeight: FontWeight.w700, color: AppColors.mintDim)),
                             ),
                           ),
                           const SizedBox(width: 12),
 
-                          // Next Level — mint gradient matching submit key
+                          // Action Button — Changes text/destination for Daily Challenges
                           Expanded(
                             flex: 2,
                             child: DecoratedBox(
+                              // ⭐ DO NOT REMOVE THIS DECORATION PROPERTY:
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                   colors: [AppColors.mint, AppColors.mintGlow],
                                 ),
-                                borderRadius:
-                                BorderRadius.circular(AppTheme.radiusKey),
+                                borderRadius: BorderRadius.circular(AppTheme.radiusKey),
                                 boxShadow: [
                                   BoxShadow(
                                     color: AppColors.mint.withOpacity(0.40),
@@ -255,37 +247,29 @@ class _VictoryDialogState extends State<VictoryDialog>
                               ),
                               child: Material(
                                 color: Colors.transparent,
-                                borderRadius:
-                                BorderRadius.circular(AppTheme.radiusKey),
+                                borderRadius: BorderRadius.circular(AppTheme.radiusKey),
                                 child: InkWell(
-                                  borderRadius:
-                                  BorderRadius.circular(AppTheme.radiusKey),
+                                  borderRadius: BorderRadius.circular(AppTheme.radiusKey),
                                   onTap: () async {
-                                    // First, safely close the open overlay alert dialog container
-                                    Get.back();
+                                    Get.back(); // Dismiss dialog frame
 
-                                    // Find the operational controller already in your memory pipeline
-                                    if (Get.isRegistered<ArithmeticController>()) {
+                                    if (isDailyChallenge) {
+                                      Get.offAllNamed(Routes.dashboard);
+                                    } else {
+                                      if (Get.isRegistered<ArithmeticController>()) {
                                       final controller = Get.find<ArithmeticController>();
-
-                                      // Call the optimized recycler method we added to update parameters
                                       controller.loadNextLevel(widget.nextLevel);
                                       await controller.updateLevelOnFirestore(widget.nextLevel.levelNumber);
-                                    } else {
-                                      // Fallback: If for any reason the instance is missing, use your original hard reload pipeline[cite: 4]
-                                      Get.off(
-                                              () => const ArithmeticChallengeView(),
-                                          binding: GameBinding(),
-                                    arguments: widget.nextLevel,
-                                    );
+                                      } else {
+                                        Get.off(() => const ArithmeticChallengeView(), binding: GameBinding(), arguments: widget.nextLevel);
+                                      }
                                     }
                                   },
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 14),
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
                                     child: Center(
                                       child: Text(
-                                        '🚀 Next Level',
+                                        isDailyChallenge ? '🏠 Done' : '🚀 Next Level',
                                         style: GoogleFonts.nunito(
                                           fontWeight: FontWeight.w900,
                                           fontSize: 15,

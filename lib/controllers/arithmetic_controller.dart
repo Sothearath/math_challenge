@@ -10,6 +10,7 @@ import '../../../core/utils/equation_builder.dart';
 import '../models/level_config.dart';
 import '../services/ad_service.dart';
 import '../services/storage_service.dart';
+import '../views/daily_challenge/daily_challenge_controller.dart';
 import '../widgets/victory_dialog.dart';
 import '../widgets/defeat_dialog.dart';
 
@@ -193,7 +194,13 @@ class ArithmeticController extends GetxController {
     //   _handleOutOfHearts();
     // }
     if (hearts.value == 0) {
-      _endGame(won: false, reason: 'noHearts');
+      if (currentLevel.levelNumber == 0) {
+        // Daily Challenge is strictly one-shot in-game! Burn attempt and end game.
+        _endGame(won: false, reason: 'noHearts');
+      } else {
+        // Standard levels can offer an ad video check block
+        _handleOutOfHearts();
+      }
     }
   }
 
@@ -321,18 +328,27 @@ class ArithmeticController extends GetxController {
     if (!_gameRunning) return;
     _stopTimer();
 
+    // ── Check if this is the Daily Challenge ──
+    final isDailyChallenge = currentLevel.levelNumber == 0; // Sentinel property
+
+    if (isDailyChallenge) {
+      _handleDailyChallengeEnd(won: won);
+      return;
+    }
+
+    // ── STANDARD LEVELS 1-15 GAME LOOP ────────────────────────────────────────
     final xpGained        = score.value * currentLevel.xpPerCorrect;
     final nextLevelNumber = (currentLevel.levelNumber + (won ? 1 : 0))
         .clamp(1, kLevels.length);
 
-    // ── Local persistence (always) ────────────────────────────────────────
+    // Local persistence (always)
     _storage.saveSession(
       level: nextLevelNumber,
       score: score.value,
       xp:    xpGained,
     );
 
-    // ── Firestore sync (best-effort, non-blocking) ────────────────────────
+    // Firestore sync (best-effort, non-blocking)
     _syncSessionToFirestore(
       xpGained:        xpGained,
       sessionScore:    score.value,
@@ -340,7 +356,7 @@ class ArithmeticController extends GetxController {
       won:             won,
     );
 
-    // ── Show dialog after short delay ─────────────────────────────────────
+    // Show dialog after short delay
     Future.delayed(const Duration(milliseconds: 400), () {
       if (won) {
         Get.dialog(
@@ -358,6 +374,60 @@ class ArithmeticController extends GetxController {
         );
       }
     });
+  }
+
+  // ── Daily Challenge End-Game Orchestrator ───────────────────────────────
+  void _handleDailyChallengeEnd({required bool won}) {
+    final dailyCtrl = Get.find<DailyChallengeController>();
+
+    if (won) {
+      // 1. Fire completion protocol (+100 XP & locks out user via Firestore)
+      dailyCtrl.completeChallenge();
+
+      // 2. Clear out game state locally
+      _storage.saveSession(
+        level: _storage.currentLevel, // Keep current level locked
+        score: score.value,
+        xp:    100,
+      );
+
+      // 3. ⭐ Create a mock configuration to safely bypass the compiler error
+      final dashboardRedirectConfig = LevelConfig(
+        levelNumber:       -1, // Special custom sentinel to signify "Exit to Dashboard"
+        label:             'Return to Home',
+        timeLimitSeconds:  0,
+        questionsPerRound: 0,
+        xpPerCorrect:      0,
+        complexityPercent: currentLevel.complexityPercent,
+        allowedOps:        currentLevel.allowedOps,
+        maxOperand:        0,
+        allowNegative:     false,
+        allowDecimal:      false,
+      );
+
+      // 4. Show the victory dialog with our clean redirect config
+      Future.delayed(const Duration(milliseconds: 400), () {
+        Get.dialog(
+          VictoryDialog(
+            xpGained:      100,
+            newComplexity: currentLevel.complexityPercent,
+            nextLevel:     dashboardRedirectConfig, // ✅ Compiler is happy!
+          ),
+          barrierDismissible: false,
+        );
+      });
+    } else {
+      // 1. Fire failure protocol (Locks out user via Firestore without XP)
+      dailyCtrl.failChallenge();
+
+      // 2. Show generic defeat dialog
+      Future.delayed(const Duration(milliseconds: 400), () {
+        Get.dialog(
+          DefeatDialog(currentLevel: currentLevel),
+          barrierDismissible: false,
+        );
+      });
+    }
   }
 
   // ── Firestore session sync ────────────────────────────────────────────────

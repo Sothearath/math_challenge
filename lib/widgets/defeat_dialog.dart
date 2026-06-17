@@ -54,6 +54,8 @@ class _DefeatDialogState extends State<DefeatDialog>
 
   @override
   Widget build(BuildContext context) {
+    final isDailyChallenge = widget.currentLevel.levelNumber == 0; // Check for Daily Challenge sentinel flag
+
     return AnimatedBuilder(
       animation: _ctrl,
       builder: (_, child) => FadeTransition(
@@ -129,114 +131,70 @@ class _DefeatDialogState extends State<DefeatDialog>
 
                     // Subtitle
                     Text(
-                      "Let's rest the brain and try again.",
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.nunito(
-                        fontSize: 15,
-                        color: AppColors.mintDim,
-                        height: 1.4,
-                      ),
+                        isDailyChallenge
+                            ? "You dropped to 0 hearts. Today's attempt has been locked out!"
+                            : "Let's rest the brain and try again.",
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.nunito(fontSize: 15, color: AppColors.mintDim, height: 1.4),
                     ),
                     const SizedBox(height: 28),
 
-                    // Buttons
-                    Row(
+                  // ── Buttons Row ──
+                  Row(
                       children: [
+                  // Left Button: Label matches action
+                  Expanded(
+                  child: OutlinedButton(
+                  onPressed: () {
+              Get.back();
+              Get.offAllNamed(Routes.dashboard);
+              },
+                  child: Text(
+                      isDailyChallenge ? 'Leave' : 'Rest',
+                      style: GoogleFonts.nunito(fontWeight: FontWeight.w700, color: AppColors.mintDim)
+              ),
+        ),
+      ),
 
-                        // Rest — pill-style matching top-bar buttons
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () {
-                              Get.back();
-                              Get.offAllNamed(Routes.dashboard);
-                            },
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.mintDim,
-                              side: BorderSide(
-                                  color: AppColors.darkDivider, width: 1.5),
-                              padding:
-                              const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(
-                                      AppTheme.radiusKey)),
-                            ),
-                            child: Text('Rest',
-                                style: GoogleFonts.nunito(
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.mintDim)),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-
-                        // Try Again — heartDanger gradient matching submit-key style
-                        Expanded(
-                          flex: 2,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  AppColors.heartDanger,
-                                  Color(0xFFFF6B6B), // heartRed — lighter end
-                                ],
-                              ),
-                              borderRadius:
-                              BorderRadius.circular(AppTheme.radiusKey),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.heartDanger.withOpacity(0.40),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Material(
-                              color: Colors.transparent,
-                              borderRadius:
-                              BorderRadius.circular(AppTheme.radiusKey),
-                              child: InkWell(
-                                borderRadius:
-                                BorderRadius.circular(AppTheme.radiusKey),
-                                onTap: () {
-                                  // 1. Close the open defeat dialog overlay instantly
-                                  Get.back();
-
-                                  // 2. Find the active controller in memory and reset the level parameters safely
-                                  if (Get.isRegistered<ArithmeticController>()) {
-                                    final controller = Get.find<ArithmeticController>();
-
-                                    // This resets hearts, score, input state, timers, and loads a fresh equation
-                                    controller.loadNextLevel(widget.currentLevel);
-                                  } else {
-                                    // Fallback: If instance is missing, fallback to your hard-reload architecture
-                                    Get.off(
-                                          () => const ArithmeticChallengeView(),
-                                      binding: GameBinding(),
-                                      arguments: widget.currentLevel,
-                                    );
-                                  }
-                                },
-                                child: Padding(
-                                  padding:
-                                  const EdgeInsets.symmetric(vertical: 14),
-                                  child: Center(
-                                    child: Text(
-                                      '🔄 Try Again',
-                                      style: GoogleFonts.nunito(
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 15,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+        // Only render the "Try Again" block if it's NOT a daily challenge match
+        if (!isDailyChallenge) ...[
+    const SizedBox(width: 12),
+    Expanded(
+    flex: 2,
+    child: DecoratedBox(
+    decoration: BoxDecoration(
+    gradient: const LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [AppColors.mint, AppColors.mintGlow],
+    ),
+    borderRadius: BorderRadius.circular(AppTheme.radiusKey),
+    boxShadow: [
+    BoxShadow(
+    color: AppColors.mint.withOpacity(0.40),
+    blurRadius: 12,
+    offset: const Offset(0, 4),
+    ),
+    ],
+    ),
+    child: InkWell(
+    onTap: () {
+    Get.back();
+    if (Get.isRegistered<ArithmeticController>()) {
+    Get.find<ArithmeticController>().loadNextLevel(widget.currentLevel);
+    } else {
+    Get.off(() => const ArithmeticChallengeView(), binding: GameBinding(), arguments: widget.currentLevel);
+    }
+    },
+    child: Center(
+    child: Text('🔄 Try Again', style: GoogleFonts.nunito(fontWeight: FontWeight.w900, fontSize: 15, color: Colors.white)),
+    ),
+    ),
+    ),
+    ),
+    ],
+    ],
+    ),
                   ],
                 ),
               ),
