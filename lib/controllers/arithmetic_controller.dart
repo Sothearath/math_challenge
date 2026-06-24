@@ -377,8 +377,44 @@ class ArithmeticController extends GetxController {
   }
 
   // ── Daily Challenge End-Game Orchestrator ───────────────────────────────
-  void _handleDailyChallengeEnd({required bool won}) {
+// ── Daily Challenge End-Game Orchestrator ───────────────────────────────
+  void _handleDailyChallengeEnd({required bool won}) async {
     final dailyCtrl = Get.find<DailyChallengeController>();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
+    // Determine if it was a perfect win (e.g., player didn't lose any hearts)
+    final bool isPerfectWin = won && (hearts.value == 3);
+
+    if (uid != null) {
+      try {
+        final userRef = FirebaseFirestore.instance.collection('users').doc(uid);
+
+        // Format current date to match your exact format string "YYYY-MM-DD"
+        final DateTime now = DateTime.now();
+        final String todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+        final Map<String, dynamic> updates = {
+          'lastDailyCompleted': todayStr,
+          'wasChallengePerfectWin': isPerfectWin,
+          'lastActiveAt': FieldValue.serverTimestamp(),
+        };
+
+        if (won) {
+          updates['totalXP'] = FieldValue.increment(100); // 100 XP payout for daily win
+          // Optional: updates['streak'] = FieldValue.increment(1);
+        } else {
+          // Optional: updates['streak'] = 0; // Reset streak on failure if desired
+        }
+
+        // Execute background fire-and-forget sync (non-blocking for UI)
+        userRef.update(updates).catchError((e) {
+          debugPrint('[ArithmeticController] Daily Firestore Sync error: $e');
+        });
+
+      } catch (e) {
+        debugPrint('[ArithmeticController] Daily Setup failed: $e');
+      }
+    }
 
     if (won) {
       // 1. Fire completion protocol (+100 XP & locks out user via Firestore)
