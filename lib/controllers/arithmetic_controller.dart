@@ -376,60 +376,20 @@ class ArithmeticController extends GetxController {
     });
   }
 
-  // ── Daily Challenge End-Game Orchestrator ───────────────────────────────
-// ── Daily Challenge End-Game Orchestrator ───────────────────────────────
-  void _handleDailyChallengeEnd({required bool won}) async {
+  // ── Daily Challenge End-Game Orchestrator (LOCAL ONLY) ───────────────────
+  void _handleDailyChallengeEnd({required bool won}) {
     final dailyCtrl = Get.find<DailyChallengeController>();
-    final uid = FirebaseAuth.instance.currentUser?.uid;
 
-    // Determine if it was a perfect win (e.g., player didn't lose any hearts)
+    // Determine if it was a perfect win (player completed it with all 3 hearts intact)
     final bool isPerfectWin = won && (hearts.value == 3);
 
-    if (uid != null) {
-      try {
-        final userRef = FirebaseFirestore.instance.collection('users').doc(uid);
-
-        // Format current date to match your exact format string "YYYY-MM-DD"
-        final DateTime now = DateTime.now();
-        final String todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-
-        final Map<String, dynamic> updates = {
-          'lastDailyCompleted': todayStr,
-          'wasChallengePerfectWin': isPerfectWin,
-          'lastActiveAt': FieldValue.serverTimestamp(),
-        };
-
-        if (won) {
-          updates['totalXP'] = FieldValue.increment(100); // 100 XP payout for daily win
-          // Optional: updates['streak'] = FieldValue.increment(1);
-        } else {
-          // Optional: updates['streak'] = 0; // Reset streak on failure if desired
-        }
-
-        // Execute background fire-and-forget sync (non-blocking for UI)
-        userRef.update(updates).catchError((e) {
-          debugPrint('[ArithmeticController] Daily Firestore Sync error: $e');
-        });
-
-      } catch (e) {
-        debugPrint('[ArithmeticController] Daily Setup failed: $e');
-      }
-    }
-
     if (won) {
-      // 1. Fire completion protocol (+100 XP & locks out user via Firestore)
-      dailyCtrl.completeChallenge();
+      // 1. Fire local storage completion protocol
+      dailyCtrl.completeChallenge(isPerfect: isPerfectWin);
 
-      // 2. Clear out game state locally
-      _storage.saveSession(
-        level: _storage.currentLevel, // Keep current level locked
-        score: score.value,
-        xp:    100,
-      );
-
-      // 3. ⭐ Create a mock configuration to safely bypass the compiler error
+      // 2. Create a mock configuration to safely bypass the nextLevel dialog compiler requirement
       final dashboardRedirectConfig = LevelConfig(
-        levelNumber:       -1, // Special custom sentinel to signify "Exit to Dashboard"
+        levelNumber:       -1, // Custom sentinel to tell Victory Dialog to run dashboard navigation
         label:             'Return to Home',
         timeLimitSeconds:  0,
         questionsPerRound: 0,
@@ -441,19 +401,19 @@ class ArithmeticController extends GetxController {
         allowDecimal:      false,
       );
 
-      // 4. Show the victory dialog with our clean redirect config
+      // 3. Show the victory dialog with our clean redirect config
       Future.delayed(const Duration(milliseconds: 400), () {
         Get.dialog(
           VictoryDialog(
             xpGained:      100,
             newComplexity: currentLevel.complexityPercent,
-            nextLevel:     dashboardRedirectConfig, // ✅ Compiler is happy!
+            nextLevel:     dashboardRedirectConfig,
           ),
           barrierDismissible: false,
         );
       });
     } else {
-      // 1. Fire failure protocol (Locks out user via Firestore without XP)
+      // 1. Fire local storage failure protocol (Locks out the card attempt)
       dailyCtrl.failChallenge();
 
       // 2. Show generic defeat dialog

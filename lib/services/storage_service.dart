@@ -211,4 +211,15 @@ class StorageService extends GetxService {
   }
 
   String _pad(int n) => n.toString().padLeft(2, '0');
+
+  /// Daily challenge
+  // Getters
+  String get lastDailyCompleted => _box.read('lastDailyCompleted') ?? '';
+  int get dailyStreak => _box.read('dailyStreak') ?? 0;
+  bool get wasChallengePerfectWin => _box.read('wasChallengePerfectWin') ?? false;
+
+  void saveDailyChallengeRecord({required String dateStr, required bool isPerfect}) {
+    _box.write('lastDailyCompleted', dateStr);
+    _box.write('wasChallengePerfectWin', isPerfect);
+  }
 }

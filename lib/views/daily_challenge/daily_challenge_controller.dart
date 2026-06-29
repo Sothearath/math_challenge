@@ -12,10 +12,12 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../models/level_config.dart';
+import '../../services/storage_service.dart';
 
 class DailyChallengeController extends GetxController {
   final _firestore = FirebaseFirestore.instance;
   final _auth      = FirebaseAuth.instance;
+  final StorageService _storage = Get.find<StorageService>(); // Inject local storage
 
   // ── Observable state ─────────────────────────────────────────────────────
   final RxBool   hasPlayedToday = false.obs;
@@ -40,35 +42,25 @@ class DailyChallengeController extends GetxController {
     _checkLockoutStatus();
   }
 
-  // ── Step 1: Check if user already completed today's challenge ────────────
+  // ── Step 1: Check Lockout status from LOCAL STORAGE ────────────────────
   Future<void> _checkLockoutStatus() async {
     isLoading.value = true;
     errorMessage.value = '';
 
     try {
-      final uid = _auth.currentUser?.uid;
-      if (uid == null) {
-        hasPlayedToday.value = false;
-        isLoading.value = false;
-        return;
-      }
-
-      // 1. Fetch the user profile document from Firestore
-      final userSnap = await _firestore.collection('users').doc(uid).get();
-
-      // 2. Read the daily date signature
-      final lastCompleted = userSnap.data()?['lastDailyCompleted'] as String?;
+      // Read directly from your local storage service keys
+      final String lastCompleted = _storage.lastDailyCompleted; // Make sure these fields exist on StorageService
       hasPlayedToday.value = (lastCompleted == todayDateString);
 
-      // 3. ⭐ GET THE VARIABLE HERE!
-      // Pull the boolean flag safely, defaulting to false if it doesn't exist yet
-      wasChallengePerfectWin.value = userSnap.data()?['wasChallengePerfectWin'] as bool? ?? false;
+      // Read perfect win flag locally
+      wasChallengePerfectWin.value = _storage.wasChallengePerfectWin;
 
+      // We still fetch the questions configs from global firestore if they haven't played
       if (!hasPlayedToday.value) {
         await _fetchTodaysConfig();
       }
     } catch (e) {
-      debugPrint('[DailyChallenge] lockout check failed: $e');
+      debugPrint('[DailyChallenge] local lockout check failed: $e');
       hasPlayedToday.value = false;
       _challengeConfig = _fallbackConfig();
     } finally {
@@ -76,7 +68,7 @@ class DailyChallengeController extends GetxController {
     }
   }
 
-  // ── Step 2: Fetch today's global equation config ──────────────────────────
+// ── Step 2: Fetch today's global equation config (Kept for syncing questions) ──
   Future<void> _fetchTodaysConfig() async {
     try {
       final configSnap = await _firestore
@@ -92,9 +84,33 @@ class DailyChallengeController extends GetxController {
 
       final data = configSnap.data()!;
       _challengeConfig = _configFromFirestore(data);
-    } on FirebaseException catch (e) {
-      debugPrint('[DailyChallenge] config fetch failed: ${e.message}');
+    } catch (e) {
+      debugPrint('[DailyChallenge] config fetch failed — using fallback');
       _challengeConfig = _fallbackConfig();
+    }
+  }
+
+  // ── Step 3: Local Completion protocol ─────────────────────────────────────
+  void completeChallenge({required bool isPerfect}) {
+    try {
+      // 1. Persist to local storage keys
+      _storage.saveDailyChallengeRecord(
+        dateStr: todayDateString,
+        isPerfect: isPerfect,
+      );
+
+      // 2. Increment local XP rewards
+      _storage.saveSession(
+        level: _storage.currentLevel,
+        score: 0,
+        xp: 100, // Pay out flat +100 XP locally
+      );
+
+      // 3. Update active UI memory state variables
+      wasChallengePerfectWin.value = isPerfect;
+      hasPlayedToday.value = true;
+    } catch (e) {
+      debugPrint('[DailyChallenge] local completion error: $e');
     }
   }
 
@@ -157,57 +173,19 @@ class DailyChallengeController extends GetxController {
     );
   }
 
-  // ── Step 3: Completion protocol ───────────────────────────────────────────
-  // Called by ArithmeticController when questionsAnswered reaches
-  // challengeConfig.questionsPerRound AND hearts > 0 (i.e. a win).
-  //
-  // Atomically:
-  //   • sets lastDailyCompleted = todayDateString  (locks out further plays)
-  //   • increments totalXP by 100
-  Future<bool> completeChallenge() async {
+// ── Step 4: Local Failure Protocol ────────────────────────────────────────
+  void failChallenge() {
     try {
-      final uid = _auth.currentUser?.uid;
-      if (uid == null) return false;
+      // 1. Burn the slot by setting today as completed, but mark perfect as false
+      _storage.saveDailyChallengeRecord(
+        dateStr: todayDateString,
+        isPerfect: false,
+      );
 
-      await _firestore.collection('users').doc(uid).update({
-        'lastDailyCompleted':    todayDateString,
-        'wasChallengePerfectWin': true, // Set to true in Firestore
-        'totalXP':               FieldValue.increment(100),
-      });
-
-      // ⭐ UPDATE IT LOCALLY HERE!
-      wasChallengePerfectWin.value = true;
-      hasPlayedToday.value = true;
-      return true;
-    } on FirebaseException catch (e) {
-      debugPrint('[DailyChallenge] completion write failed: ${e.message}');
-      return false;
-    } catch (e) {
-      debugPrint('[DailyChallenge] completion error: $e');
-      return false;
-    }
-  }
-
-  // ── Step 4: Failure Protocol ──────────────────────────────────────────────
-  // Called by ArithmeticController when lives/hearts reach 0 (i.e. a loss).
-  // Burns their daily attempt slot without giving them the +100 XP reward.
-  Future<bool> failChallenge() async {
-    try {
-      final uid = _auth.currentUser?.uid;
-      if (uid == null) return false;
-
-      await _firestore.collection('users').doc(uid).update({
-        'lastDailyCompleted':    todayDateString,
-        'wasChallengePerfectWin': false, // Set to false in Firestore
-      });
-
-      // ⭐ UPDATE IT LOCALLY HERE!
       wasChallengePerfectWin.value = false;
-      hasPlayedToday.value = true; // Lockout the card
-      return true;
+      hasPlayedToday.value = true; // Lockout card from being played again
     } catch (e) {
-      debugPrint('[DailyChallenge] failure write failed: $e');
-      return false;
+      debugPrint('[DailyChallenge] local failure error: $e');
     }
   }
 
