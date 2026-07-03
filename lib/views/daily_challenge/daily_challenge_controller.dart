@@ -10,6 +10,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:intl/intl.dart';
 import '../../models/level_config.dart';
 import '../../services/storage_service.dart';
@@ -40,6 +41,18 @@ class DailyChallengeController extends GetxController {
     super.onInit();
     todayDateString = DateFormat('yyyy-MM-dd').format(DateTime.now());
     _checkLockoutStatus();
+
+    printGetStorage();
+
+  }
+
+  void printGetStorage() {
+    final box = GetStorage();
+
+    // Alternative: print(box.changes.toString());
+    box.getKeys().forEach((key) {
+      print('$key: ${box.read(key)}');
+    });
   }
 
   // ── Step 1: Check Lockout status from LOCAL STORAGE ────────────────────
@@ -98,6 +111,9 @@ class DailyChallengeController extends GetxController {
         dateStr: todayDateString,
         isPerfect: isPerfect,
       );
+
+      // ⭐ Increment the pre-existing total completed counter!
+      _storage.dailyCompleted = _storage.dailyCompleted + 1;
 
       // 2. Increment local XP rewards
       _storage.saveSession(

@@ -146,8 +146,11 @@ class DailyChallengeHistoryView extends StatelessWidget {
                       final int displayDay = index - startingWeekday + 1;
                       final bool isToday = displayDay == currentDayIndex;
 
-                      // ⭐ 3. Fixed logic: A day is completed if it matches streak offsets OR it's today and state says played!
-                      final bool isCompleted = (displayDay <= 2) || (isToday && hasPlayedToday);
+                      // Calculate how far back your active consecutive streak extends
+                      final int streakStartDay = currentDayIndex - currentStreak + (hasPlayedToday ? 0 : 1);
+
+                      // ⭐ Safe accurate completion flag matching local state fields
+                      final bool isCompleted = (displayDay >= streakStartDay && displayDay < currentDayIndex) || (isToday && hasPlayedToday);
 
                       return Container(
                         alignment: Alignment.center,

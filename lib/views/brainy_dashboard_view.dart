@@ -3,10 +3,12 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../controllers/dashboard_controller.dart';
 import '../../../core/constants.dart';
 import '../models/level_config.dart';
+import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/brainy_painter.dart';
 import 'daily_challenge/daily_challenge_controller.dart';
@@ -872,9 +874,10 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
               ),
               tooltip: 'View History',
               onPressed: () {
+                final StorageService storage = Get.find<StorageService>();
                 Get.to(
                       () => DailyChallengeHistoryView(
-                    currentStreak: _ctrl.weekStreak.value,
+                    currentStreak: storage.dailyCompleted,
                     hasPlayedToday: _dailyCtrl.hasPlayedToday.value, // ⭐ Pass the dynamic value here!
                     onPlayPressed: () {
                       Get.back();
