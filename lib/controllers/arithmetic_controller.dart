@@ -369,7 +369,7 @@ class ArithmeticController extends GetxController {
         );
       } else {
         Get.dialog(
-          DefeatDialog(currentLevel: currentLevel),
+          DefeatDialog(currentLevel: currentLevel,remainingHearts: hearts.value,),
           barrierDismissible: false,
         );
       }
@@ -419,7 +419,7 @@ class ArithmeticController extends GetxController {
       // 2. Show generic defeat dialog
       Future.delayed(const Duration(milliseconds: 400), () {
         Get.dialog(
-          DefeatDialog(currentLevel: currentLevel),
+          DefeatDialog(currentLevel: currentLevel,remainingHearts: hearts.value,),
           barrierDismissible: false,
         );
       });

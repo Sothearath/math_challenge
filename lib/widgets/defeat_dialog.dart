@@ -13,14 +13,19 @@ import '../views/arithmetic_challenge_view.dart';
 
 class DefeatDialog extends StatefulWidget {
   final LevelConfig currentLevel;
-  const DefeatDialog({super.key, required this.currentLevel});
+  final int remainingHearts;
+
+  const DefeatDialog({
+    super.key,
+    required this.currentLevel,
+    required this.remainingHearts,
+  });
 
   @override
   State<DefeatDialog> createState() => _DefeatDialogState();
 }
 
-class _DefeatDialogState extends State<DefeatDialog>
-    with SingleTickerProviderStateMixin {
+class _DefeatDialogState extends State<DefeatDialog> with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double>   _shake;
   late final Animation<double>   _fade;
@@ -28,10 +33,7 @@ class _DefeatDialogState extends State<DefeatDialog>
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
     _shake = TweenSequence<double>([
       TweenSequenceItem(tween: Tween(begin: 0,   end: -12), weight: 1),
       TweenSequenceItem(tween: Tween(begin: -12, end: 12),  weight: 2),
@@ -54,7 +56,7 @@ class _DefeatDialogState extends State<DefeatDialog>
 
   @override
   Widget build(BuildContext context) {
-    final isDailyChallenge = widget.currentLevel.levelNumber == 0; // Check for Daily Challenge sentinel flag
+    final isDailyChallenge = widget.currentLevel.levelNumber == 0;
 
     return AnimatedBuilder(
       animation: _ctrl,
@@ -67,13 +69,12 @@ class _DefeatDialogState extends State<DefeatDialog>
         insetPadding: const EdgeInsets.symmetric(horizontal: 24),
         child: Container(
           decoration: BoxDecoration(
-            // Dark card — consistent with equation card
             color: AppColors.darkCard,
             borderRadius: BorderRadius.circular(AppTheme.radiusDialog),
-            border: Border.all(color: AppColors.heartDanger.withOpacity(0.30)),
+            border: Border.all(color: AppColors.heartDanger.withValues(alpha: 0.30)),
             boxShadow: [
               BoxShadow(
-                color: AppColors.heartDanger.withOpacity(0.18),
+                color: AppColors.heartDanger.withValues(alpha: 0.18),
                 blurRadius: 40,
                 spreadRadius: 4,
                 offset: const Offset(0, 8),
@@ -84,40 +85,31 @@ class _DefeatDialogState extends State<DefeatDialog>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-
               // ── Danger header band ─────────────────────────────────────────
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
                 decoration: BoxDecoration(
-                  // Desaturated danger gradient — dark rose → darkCard
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      AppColors.heartDanger.withOpacity(0.22),
+                      AppColors.heartDanger.withValues(alpha: 0.22),
                       AppColors.darkCard,
                     ],
                   ),
                 ),
                 child: Column(
                   children: [
-                    // Exhausted mascot
                     SizedBox(
                       width: 120,
                       height: 130,
                       child: CustomPaint(painter: _ExhaustedBrainyPainter()),
                     ),
                     const SizedBox(height: 16),
-
-                    // Headline
                     Text(
                       'Close one! 😓',
-                      style: GoogleFonts.nunito(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                      ),
+                      style: GoogleFonts.nunito(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white),
                     ),
                   ],
                 ),
@@ -128,78 +120,86 @@ class _DefeatDialogState extends State<DefeatDialog>
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
                 child: Column(
                   children: [
-
-                    // Subtitle
                     Text(
-                        isDailyChallenge
-                            ? "You dropped to 0 hearts. Today's attempt has been locked out!"
-                            : "Let's rest the brain and try again.",
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.nunito(fontSize: 15, color: AppColors.mintDim, height: 1.4),
+                      isDailyChallenge
+                          ? (widget.remainingHearts <= 0
+                          ? "You dropped to 0 hearts. Today's attempt has been locked out!"
+                          : "Time's up! Today's attempt has been locked out!")
+                          : "Let's rest the brain and try again.",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.nunito(fontSize: 15, color: AppColors.mintDim, height: 1.4),
                     ),
                     const SizedBox(height: 28),
 
-                  // ── Buttons Row ──
-                  Row(
+                    // ── Buttons Row ──
+                    Row(
                       children: [
-                  // Left Button: Label matches action
-                  Expanded(
-                  child: OutlinedButton(
-                  onPressed: () {
-              Get.back();
-              Get.offAllNamed(Routes.dashboard);
-              },
-                  child: Text(
-                      isDailyChallenge ? 'Leave' : 'Rest',
-                      style: GoogleFonts.nunito(fontWeight: FontWeight.w700, color: AppColors.mintDim)
-              ),
-        ),
-      ),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              Get.back();
+                              Get.offAllNamed(Routes.dashboard);
+                            },
+                            child: Text(
+                              isDailyChallenge ? 'Leave' : 'Rest',
+                              style: GoogleFonts.nunito(fontWeight: FontWeight.w700, color: AppColors.mintDim),
+                            ),
+                          ),
+                        ),
 
-        // Only render the "Try Again" block if it's NOT a daily challenge match
-        if (!isDailyChallenge) ...[
-    const SizedBox(width: 12),
-    Expanded(
-    flex: 2,
-    child: DecoratedBox(
-    decoration: BoxDecoration(
-    gradient: const LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [AppColors.mint, AppColors.mintGlow],
-    ),
-    borderRadius: BorderRadius.circular(AppTheme.radiusKey),
-    boxShadow: [
-    BoxShadow(
-    color: AppColors.mint.withOpacity(0.40),
-    blurRadius: 12,
-    offset: const Offset(0, 4),
-    ),
-    ],
-    ),
-    child: InkWell(
-    onTap: () {
-    Get.back();
-    if (Get.isRegistered<ArithmeticController>()) {
-    Get.find<ArithmeticController>().loadNextLevel(widget.currentLevel);
-    } else {
-    Get.off(() => const ArithmeticChallengeView(), binding: GameBinding(), arguments: widget.currentLevel);
-    }
-    },
-    child: Center(
-    child: Text('🔄 Try Again', style: GoogleFonts.nunito(fontWeight: FontWeight.w900, fontSize: 15, color: Colors.white)),
-    ),
-    ),
-    ),
-    ),
-    ],
-    ],
-    ),
+                        // Clean Extracted Action Slot
+                        if (!isDailyChallenge) ...[
+                          const SizedBox(width: 12),
+                          _buildTryAgainButton(),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // ── Extracted Try Again Action Button ───────────────────────────────────────
+  Widget _buildTryAgainButton() {
+    return Expanded(
+      flex: 2,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.mint, AppColors.mintGlow],
+          ),
+          borderRadius: BorderRadius.circular(AppTheme.radiusKey),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.mint.withValues(alpha: 0.40),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: InkWell(
+          onTap: () {
+            Get.back();
+            if (Get.isRegistered<ArithmeticController>()) {
+              Get.find<ArithmeticController>().loadNextLevel(widget.currentLevel);
+            } else {
+              Get.off(() => const ArithmeticChallengeView(), binding: GameBinding(), arguments: widget.currentLevel);
+            }
+          },
+          child:Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14), child:  Center(
+            child: Text(
+              '🔄 Try Again',
+              style: GoogleFonts.nunito(fontWeight: FontWeight.w900, fontSize: 15, color: Colors.white),
+            ),
+          ),)
         ),
       ),
     );
@@ -212,22 +212,18 @@ class _ExhaustedBrainyPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final teal  = Paint()..color = AppColors.brainyBody;
     final dark  = Paint()..color = AppColors.darkBg;
-    // Sweat drops use gradientBottom (sky blue) — cohesive with the palette
-    final sweat = Paint()..color = AppColors.gradientBottom.withOpacity(0.80);
+    final sweat = Paint()..color = AppColors.gradientBottom.withValues(alpha: 0.80);
 
     final cx = size.width / 2;
     final hy = size.height * 0.30;
 
-    // Soft danger glow behind head
     canvas.drawCircle(Offset(cx, hy), 36,
         Paint()
-          ..color = AppColors.heartDanger.withOpacity(0.10)
+          ..color = AppColors.heartDanger.withValues(alpha: 0.10)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14));
 
-    // Head
     canvas.drawCircle(Offset(cx, hy), 32, teal);
 
-    // Sweatband — heartDanger stripe
     canvas.drawArc(
       Rect.fromCircle(center: Offset(cx, hy), radius: 32),
       math.pi + 0.3, math.pi - 0.6, false,
@@ -238,17 +234,14 @@ class _ExhaustedBrainyPainter extends CustomPainter {
         ..strokeCap = StrokeCap.round,
     );
 
-    // Tired eyes
     _drawTiredEye(canvas, Offset(cx - 10, hy + 2), dark);
     _drawTiredEye(canvas, Offset(cx + 10, hy + 2), dark);
 
-    // Sweat drops
     canvas.drawOval(
         Rect.fromCenter(center: Offset(cx + 28, hy - 6), width: 6, height: 9), sweat);
     canvas.drawOval(
         Rect.fromCenter(center: Offset(cx + 34, hy + 4), width: 4, height: 7), sweat);
 
-    // Frown
     canvas.drawPath(
       Path()
         ..moveTo(cx - 9, hy + 16)
@@ -260,7 +253,6 @@ class _ExhaustedBrainyPainter extends CustomPainter {
         ..strokeCap = StrokeCap.round,
     );
 
-    // Body
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromCenter(
@@ -270,7 +262,6 @@ class _ExhaustedBrainyPainter extends CustomPainter {
       teal,
     );
 
-    // Arms drooping
     for (final path in [
       Path()
         ..moveTo(cx - 21, size.height * 0.56)
@@ -287,7 +278,6 @@ class _ExhaustedBrainyPainter extends CustomPainter {
             ..strokeCap = StrokeCap.round);
     }
 
-    // Legs
     for (final pts in [
       [Offset(cx - 10, size.height * 0.84), Offset(cx - 13, size.height * 0.97)],
       [Offset(cx + 10, size.height * 0.84), Offset(cx + 13, size.height * 0.97)],
