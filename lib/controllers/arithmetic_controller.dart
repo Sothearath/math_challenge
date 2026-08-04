@@ -56,6 +56,11 @@ class ArithmeticController extends GetxController {
   Timer? _timer;
   bool   _gameRunning = false;
 
+  /// Cached only when currentLevel.levelNumber == 0 (Daily Challenge).
+  /// Null for standard levels — always guard with `_isDailyChallenge`.
+  DailyChallengeController? _dailyCtrl;
+  bool get _isDailyChallenge => currentLevel.levelNumber == 0;
+
   @override
   void onInit() {
     super.onInit();
@@ -65,6 +70,44 @@ class ArithmeticController extends GetxController {
       final saved = _storage.currentLevel.clamp(1, kLevels.length);
       currentLevel = kLevels[saved - 1];
     }
+
+    // ── Daily Challenge re-entry guard ────────────────────────────────────
+    // A fresh controller instance always resets `hearts` to 3 — that's
+    // correct behavior for standard levels, but for the Daily Challenge
+    // (levelNumber == 0) it means a user who already burned today's slot
+    // (win, fail, or noHearts loss) could just navigate back into this
+    // route and get a brand-new set of hearts. Block that here, before
+    // any timer starts or equation is generated.
+    if (currentLevel.levelNumber == 0) {
+      final dailyCtrl = Get.find<DailyChallengeController>();
+      _dailyCtrl = dailyCtrl;
+
+      if (dailyCtrl.hasPlayedToday.value) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Get.back();
+          Get.snackbar(
+            'Already Played Today',
+            "You've already taken today's challenge — come back tomorrow!",
+            snackPosition: SnackPosition.BOTTOM,
+            margin: const EdgeInsets.all(16),
+          );
+        });
+        return; // ⭐ skip timer/equation setup entirely — no playable session
+      }
+
+      if (dailyCtrl.isInProgress.value) {
+        // Resuming a session that was quit mid-attempt — restore the exact
+        // hearts/progress it was at instead of starting over at full hearts.
+        hearts.value = dailyCtrl.resumeHearts.value;
+        questionsAnswered.value = dailyCtrl.resumeFromIndex.value;
+        progressTarget.value =
+            (questionsAnswered.value / currentLevel.questionsPerRound).clamp(0.0, 1.0);
+        dangerState.value = hearts.value == 1;
+      } else {
+        dailyCtrl.markInProgress(); // slot is open — mark it as started
+      }
+    }
+
     timeLeft.value = currentLevel.timeLimitSeconds;
     dynamicDifficultyTier.value = 0; // Initialize standard difficulty tier
 
@@ -143,6 +186,10 @@ class ArithmeticController extends GetxController {
     progressTarget.value = (questionsAnswered.value / currentLevel.questionsPerRound).clamp(0.0, 1.0);
     particleBurstTick.value++;
 
+    if (_isDailyChallenge) {
+      _dailyCtrl?.updateProgress(questionsAnswered.value); // ⭐ so a resumed session picks up here
+    }
+
     int responseTimeMs = 9999;
     if (_questionStartTime != null) {
       responseTimeMs = DateTime.now().difference(_questionStartTime!).inMilliseconds;
@@ -176,6 +223,10 @@ class ArithmeticController extends GetxController {
     hearts.value      = (hearts.value - 1).clamp(0, 3);
     dangerState.value = hearts.value == 1;
     _consecutiveWrongAnswers++;
+
+    if (_isDailyChallenge) {
+      _dailyCtrl?.updateHearts(hearts.value); // ⭐ so a resumed session isn't full again
+    }
     wrongAnswerTick.value++;  // triggers WrongAnswerFlash + equation card shake
     isWrongFlashing.value = true;
     Future.delayed(const Duration(milliseconds: 400), () {
@@ -211,7 +262,7 @@ class ArithmeticController extends GetxController {
     // Show a dialog box asking if they want to watch an ad for a second chance
     Get.dialog(
       AlertDialog(
-        title: const Text('💡 Out of Hearts!', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('💔 Out of Hearts!', style: TextStyle(fontWeight: FontWeight.bold)),
         content: const Text('Watch a quick video to restore 1 Heart and keep your streak alive?'),
         actions: [
           TextButton(

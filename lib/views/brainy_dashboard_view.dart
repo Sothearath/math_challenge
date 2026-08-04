@@ -14,6 +14,13 @@ import '../widgets/brainy_painter.dart';
 import 'daily_challenge/daily_challenge_controller.dart';
 import 'daily_challenge/daily_challenge_history_view.dart';
 
+/// Why the second-chance dialog is being shown — determines the copy and,
+/// in future, could gate different reward logic per reason.
+enum SecondChanceReason {
+  outOfHearts,
+  alreadyPlayedToday,
+}
+
 class BrainyDashboardView extends StatefulWidget {
   const BrainyDashboardView({super.key});
 
@@ -874,19 +881,22 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
               ),
               tooltip: 'View History',
               onPressed: () {
-                final StorageService storage = Get.find<StorageService>();
+                void goToGame() {
+                  Get.back();
+                  Get.toNamed(Routes.game, arguments: _dailyCtrl.challengeConfig)
+                      ?.then((_) => _ctrl.refreshStats());
+                }
+
                 Get.to(
-                      () => DailyChallengeHistoryView(
-                    currentStreak: storage.dailyCompleted,
-                    hasPlayedToday: _dailyCtrl.hasPlayedToday.value, // ⭐ Pass the dynamic value here!
+                      () => Obx(() => DailyChallengeHistoryView(
+                    hasPlayedToday: _dailyCtrl.hasPlayedToday.value,
+                    isInProgress: _dailyCtrl.isInProgress.value, // ⭐ drives "Continue Challenge"
+                    history: _dailyCtrl.history, // ⭐ drives the 3-state calendar grid
                     onPlayPressed: () {
-                      Get.back();
-                      if (!_dailyCtrl.hasPlayedToday.value) {
-                        Get.toNamed(Routes.game, arguments: _dailyCtrl.challengeConfig)
-                            ?.then((_) => _ctrl.refreshStats());
-                      }
+                      if (!_dailyCtrl.hasPlayedToday.value) goToGame();
                     },
-                  ),
+                    onContinuePressed: goToGame, // ⭐ resumes today's in-progress attempt
+                  )),
                   transition: Transition.rightToLeft,
                 );
               },
@@ -973,14 +983,17 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
   }
 
   void _handleLockedCardTap(BuildContext context) {
-    // Assuming your storage or controller tracks whether today was a clean win
-    // For now, if they are locked out, let's see if they want a revive:
-    final bool outOfHearts = !_dailyCtrl.wasChallengePerfectWin.value;
+    // hasPlayedToday is already true whenever this card is "locked" — the
+    // only branch to make is perfect win (celebrate) vs non-perfect/failed
+    // (offer an ad-unlocked retry). wasChallengePerfectWin already answers
+    // that directly; no need to invert it or treat it as a hearts proxy.
+    final bool finishedButNotPerfect =
+        _dailyCtrl.hasPlayedToday.value && !_dailyCtrl.wasChallengePerfectWin.value;
 
-    if (outOfHearts) {
-      _showSecondChanceDialog(context);
+    if (finishedButNotPerfect) {
+      _showSecondChanceDialog(context, reason: SecondChanceReason.alreadyPlayedToday);
     } else {
-      // Clean Win feedback
+      // Clean win feedback
       Get.snackbar(
         'Completed! 🎉',
         'You nailed today\'s challenge! Come back at midnight for a brand new board.',
@@ -992,25 +1005,36 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
     }
   }
 
-  void _showSecondChanceDialog(BuildContext context) {
+  void _showSecondChanceDialog(
+      BuildContext context, {
+        required SecondChanceReason reason,
+      }) {
+    final bool alreadyPlayed = reason == SecondChanceReason.alreadyPlayedToday;
+
+    final String emoji = alreadyPlayed ? '🔒' : '💔';
+    final String title = alreadyPlayed ? 'Challenge Already Completed!' : 'Out of Hearts!';
+    final String body = alreadyPlayed
+        ? "You already finished today's challenge! Watch a quick video to unlock one more attempt."
+        : "Don't break your training streak! Watch a quick video to get 1 extra heart and try today's challenge again.";
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
         title: Text(
-          '💔 Out of Hearts!',
+          '$emoji $title',
           textAlign: TextAlign.center,
           style: GoogleFonts.nunito(fontWeight: FontWeight.w900, color: AppColors.cobalt),
         ),
         content: Text(
-          'Don\'t break your training streak! Watch a quick video to get 1 extra heart and try today\'s challenge again.',
+          body,
           textAlign: TextAlign.center,
           style: GoogleFonts.nunito(color: AppColors.cobalt.withOpacity(0.7)),
         ),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
           TextButton(
-             onPressed: () { Get.back() ;},
+            onPressed: () { Get.back(); },
             child: Text('Maybe later', style: GoogleFonts.nunito(color: Colors.grey)),
           ),
           ElevatedButton.icon(
@@ -1018,22 +1042,22 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
               backgroundColor: AppColors.sunflower,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusButton)),
             ),
-
             icon: const Icon(Icons.play_circle_filled_rounded, color: AppColors.cobalt),
             label: Text(
               'Watch Ad',
               style: GoogleFonts.nunito(fontWeight: FontWeight.w900, color: AppColors.cobalt),
-            ), onPressed: () {
-            Get.back();
-            // ⭐ Trigger Ad Engine / Reward validation here
-            _dailyCtrl.grantSecondChanceChance();
+            ),
+            onPressed: () {
+              Get.back();
+              // ⭐ Trigger Ad Engine / Reward validation here
+              _dailyCtrl.grantSecondChanceChance();
 
-            // Reroute back into the game loop using the exact same configuration seed
-            Get.toNamed(
-              Routes.game,
-              arguments: _dailyCtrl.challengeConfig,
-            )?.then((_) => _ctrl.refreshStats());
-          },
+              // Reroute back into the game loop using the exact same configuration seed
+              Get.toNamed(
+                Routes.game,
+                arguments: _dailyCtrl.challengeConfig,
+              )?.then((_) => _ctrl.refreshStats());
+            },
           ),
         ],
       ),
