@@ -10,6 +10,7 @@ import '../../../core/utils/equation_builder.dart';
 import '../models/level_config.dart';
 import '../services/ad_service.dart';
 import '../services/storage_service.dart';
+import '../services/storage_service_level_progress_ext.dart';
 import '../views/daily_challenge/daily_challenge_controller.dart';
 import '../widgets/victory_dialog.dart';
 import '../widgets/defeat_dialog.dart';
@@ -106,6 +107,20 @@ class ArithmeticController extends GetxController {
       } else {
         dailyCtrl.markInProgress(); // slot is open — mark it as started
       }
+    } else {
+      // ── Standard level (1-15) resume-on-quit ────────────────────────────
+      // Levels are replayable — a *finished* attempt (win/loss/timeout)
+      // clears this in _endGame(), so only a genuine mid-session quit ever
+      // leaves levelInProgress == true for the level being re-entered.
+      if (_storage.levelInProgress(currentLevel.levelNumber)) {
+        hearts.value = _storage.levelHeartsFor(currentLevel.levelNumber);
+        questionsAnswered.value = _storage.levelProgressFor(currentLevel.levelNumber);
+        progressTarget.value =
+            (questionsAnswered.value / currentLevel.questionsPerRound).clamp(0.0, 1.0);
+        dangerState.value = hearts.value == 1;
+      } else {
+        _storage.setLevelInProgress(currentLevel.levelNumber, true);
+      }
     }
 
     timeLeft.value = currentLevel.timeLimitSeconds;
@@ -188,6 +203,8 @@ class ArithmeticController extends GetxController {
 
     if (_isDailyChallenge) {
       _dailyCtrl?.updateProgress(questionsAnswered.value); // ⭐ so a resumed session picks up here
+    } else {
+      _storage.setLevelProgressFor(currentLevel.levelNumber, questionsAnswered.value);
     }
 
     int responseTimeMs = 9999;
@@ -226,6 +243,8 @@ class ArithmeticController extends GetxController {
 
     if (_isDailyChallenge) {
       _dailyCtrl?.updateHearts(hearts.value); // ⭐ so a resumed session isn't full again
+    } else {
+      _storage.setLevelHeartsFor(currentLevel.levelNumber, hearts.value);
     }
     wrongAnswerTick.value++;  // triggers WrongAnswerFlash + equation card shake
     isWrongFlashing.value = true;
@@ -267,7 +286,8 @@ class ArithmeticController extends GetxController {
         actions: [
           TextButton(
             onPressed: () {
-              Get.back(); // Close this choice alert
+              // Get.back(); // Close this choice alert
+              quitGame();
               _endGame(won: false, reason: 'noHearts'); // Reject ad -> Trigger Game Over
             },
             child: const Text('No, Quit', style: TextStyle(color: Colors.grey)),
@@ -282,6 +302,7 @@ class ArithmeticController extends GetxController {
                   // Reward path: Add a heart back and keep playing!
                   hearts.value = 1;
                   dangerState.value = true;
+                  _storage.setLevelHeartsFor(currentLevel.levelNumber, hearts.value); // ⭐ keep resume state in sync
                   _spawnFloating("❤️ Extra Life Granted!", const Color(0xFFFF5252));
                 },
                 onAdClosedOrFailed: () {
@@ -386,6 +407,11 @@ class ArithmeticController extends GetxController {
       _handleDailyChallengeEnd(won: won);
       return;
     }
+
+    // Attempt has concluded (win/loss/timeout) — clear resume state so the
+    // *next* attempt at this level starts fresh at full hearts instead of
+    // silently resuming a session that already ended.
+    _storage.clearLevelProgress(currentLevel.levelNumber);
 
     // ── STANDARD LEVELS 1-15 GAME LOOP ────────────────────────────────────────
     final xpGained        = score.value * currentLevel.xpPerCorrect;
@@ -532,6 +558,8 @@ class ArithmeticController extends GetxController {
     dangerState.value = false;
     dynamicDifficultyTier.value = 0; // Safely clean status modifiers for next stage
     timeLeft.value = currentLevel.timeLimitSeconds;
+    hearts.value = 3; // Fresh level, fresh hearts
+    _storage.setLevelInProgress(currentLevel.levelNumber, true); // ⭐ onInit won't re-run for this instance
     _generateEquation();
     _timer?.cancel();
     _startTimer();

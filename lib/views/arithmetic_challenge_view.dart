@@ -7,7 +7,6 @@ import '../controllers/arithmetic_controller.dart';
 import '../core/constants.dart';
 import '../painters/particle_burst_painter.dart';
 import '../theme/app_theme.dart';
-import '../widgets/numeric_keypad.dart';
 
 class ArithmeticChallengeView extends GetView<ArithmeticController> {
   const ArithmeticChallengeView({super.key});
