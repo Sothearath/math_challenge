@@ -1,14 +1,15 @@
 // lib/features/dashboard/views/brainy_dashboard_view.dart
 
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:gap/gap.dart';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../controllers/dashboard_controller.dart';
+
 import '../../../core/constants.dart';
+import '../controllers/dashboard_controller.dart';
 import '../models/level_config.dart';
-import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/brainy_painter.dart';
 import 'daily_challenge/daily_challenge_controller.dart';
@@ -16,10 +17,7 @@ import 'daily_challenge/daily_challenge_history_view.dart';
 
 /// Why the second-chance dialog is being shown — determines the copy and,
 /// in future, could gate different reward logic per reason.
-enum SecondChanceReason {
-  outOfHearts,
-  alreadyPlayedToday,
-}
+enum SecondChanceReason { outOfHearts, alreadyPlayedToday }
 
 class BrainyDashboardView extends StatefulWidget {
   const BrainyDashboardView({super.key});
@@ -30,14 +28,13 @@ class BrainyDashboardView extends StatefulWidget {
 
 class _BrainyDashboardViewState extends State<BrainyDashboardView>
     with TickerProviderStateMixin {
-
   late final DashboardController _ctrl;
   late final DailyChallengeController _dailyCtrl;
   late final AnimationController _bobCtrl;
-  late final Animation<double>   _bobAnim;
+  late final Animation<double> _bobAnim;
   late final AnimationController _pulseCtrl;
-  late final Animation<double>   _pulseAnim;
-  late final Animation<double>   _glowAnim;
+  late final Animation<double> _pulseAnim;
+  late final Animation<double> _glowAnim;
 
   @override
   void initState() {
@@ -55,10 +52,14 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
       vsync: this,
       duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
-    _pulseAnim = CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut)
-        .drive(Tween(begin: 1.0, end: 1.04));
-    _glowAnim = CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut)
-        .drive(Tween(begin: 0.25, end: 0.55));
+    _pulseAnim = CurvedAnimation(
+      parent: _pulseCtrl,
+      curve: Curves.easeInOut,
+    ).drive(Tween(begin: 1.0, end: 1.04));
+    _glowAnim = CurvedAnimation(
+      parent: _pulseCtrl,
+      curve: Curves.easeInOut,
+    ).drive(Tween(begin: 0.25, end: 0.55));
   }
 
   @override
@@ -91,22 +92,19 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
                 child: SingleChildScrollView(
                   // Let the scroll view expand to fill remaining space
                   physics: const ClampingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   child: Column(
                     children: [
-                      _buildStatsBar(),
-                      const SizedBox(height: 14),
-                      _buildGreetingBubble(),
                       const SizedBox(height: 16),
+                      _buildStatsBar(),
+                      const SizedBox(height: 16),
+                      _buildGreetingBubble(),
+                      Gap(48),
                       _buildMascot(),
-                      const SizedBox(height: 24),
-                      // _buildProgressCard(),
-                      const SizedBox(height: 20),
-                      //
-                      // _buildDailyChallengeCard(context),
-                      // const SizedBox(height: 20),
-                      // _buildBeginButton(),
-                      // const SizedBox(height: 24),
+                      Gap(48),
                       Center(
                         child: Text(
                           'FlexiArithmetic',
@@ -125,16 +123,23 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
                 ),
               ),
 
-
-
               // 📌 2. Bottom Fixed Section: Always firmly anchored to the bottom of the screen
               Padding(
-                padding: const EdgeInsets.only(left: 16, right: 16, bottom: 88, top: 8),
+                padding: const EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  bottom: 48,
+                  top: 8,
+                ),
                 child: Column(
-                  mainAxisSize: MainAxisSize.min, // Takes up only the space it needs
+                  mainAxisSize:
+                      MainAxisSize.min, // Takes up only the space it needs
                   children: [
+                    // Gap(100),
                     _buildDailyChallengeCard(context),
-                    const SizedBox(height: 16), // Clean padding between the two cards
+                    const SizedBox(
+                      height: 16,
+                    ), // Clean padding between the two cards
                     _buildBeginButton(),
                   ],
                 ),
@@ -149,37 +154,44 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
   // ── Stats bar ─────────────────────────────────────────────────────────────────
   // Same frosted-glass pill style as ArithmeticChallengeView._pill().
   // lib/features/dashboard/views/brainy_dashboard_view.dart
-// ── Stats bar ─────────────────────────────────────────────────────────────────
+  // ── Stats bar ─────────────────────────────────────────────────────────────────
   // Same frosted-glass pill style as ArithmeticChallengeView._pill().
   Widget _buildStatsBar() {
-    return Obx(() => Row(
-      children: [
-        Expanded(child: _statPill(
-          icon: Icons.timer_outlined,
-          value: '${_ctrl.weekStreak.value * 2}',
-          unit: 'min',
-          label: 'Training time',
-        )),
-        const SizedBox(width: 8),
-        Expanded(child: _statPill(
-          icon: Icons.bar_chart_rounded,
-          value: '${_ctrl.complexityPercent.value}',
-          unit: '%',
-          label: 'Complexity',
-        )),
-        const SizedBox(width: 8),
-        Expanded(child: _statPill(
-          icon: Icons.track_changes_rounded,
-          value: '${_ctrl.avgAccuracy.value}',
-          unit: '%',
-          label: 'Focus score',
-        )),
-        const SizedBox(width: 8),
-        _settingsButton(),
-      ],
-    ));
+    return Obx(
+      () => Row(
+        children: [
+          Expanded(
+            child: _statPill(
+              icon: Icons.timer_outlined,
+              value: '${_ctrl.weekStreak.value * 2}',
+              unit: 'min',
+              label: 'Training time',
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _statPill(
+              icon: Icons.bar_chart_rounded,
+              value: '${_ctrl.complexityPercent.value}',
+              unit: '%',
+              label: 'Complexity',
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _statPill(
+              icon: Icons.track_changes_rounded,
+              value: '${_ctrl.avgAccuracy.value}',
+              unit: '%',
+              label: 'Focus score',
+            ),
+          ),
+          const SizedBox(width: 8),
+          _settingsButton(),
+        ],
+      ),
+    );
   }
-
 
   // Frosted-glass pill — white @ 28% fill + white @ 55% border,
   // exactly matching the challenge view's _pill() container style.
@@ -188,64 +200,63 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
     required String value,
     required String unit,
     required String label,
-  }) =>
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.28),
-          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-          border: Border.all(color: Colors.white.withOpacity(0.55)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  }) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+    decoration: BoxDecoration(
+      color: Colors.white.withOpacity(0.28),
+      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+      border: Border.all(color: Colors.white.withOpacity(0.55)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: AppColors.cobalt, size: 14),
+        const SizedBox(height: 4),
+        // Wrap in Row so the unit shrinks before value clips
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
           children: [
-            Icon(icon, color: AppColors.cobalt, size: 14),
-            const SizedBox(height: 4),
-            // Wrap in Row so the unit shrinks before value clips
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Flexible(
-                  child: Text(
-                    value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.nunito(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.cobalt,
-                      height: 1,
-                    ),
-                  ),
+            Flexible(
+              child: Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.nunito(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.cobalt,
+                  height: 1,
                 ),
-                Text(
-                  ' $unit',
-                  maxLines: 1,
-                  overflow: TextOverflow.clip,
-                  style: GoogleFonts.nunito(
-                    fontSize: 11,
-                    color: AppColors.cobalt.withOpacity(0.60),
-                  ),
-                ),
-              ],
+              ),
             ),
-            const SizedBox(height: 2),
             Text(
-              label,
+              ' $unit',
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              overflow: TextOverflow.clip,
               style: GoogleFonts.nunito(
-                  fontSize: 9,
-                  color: AppColors.mutedOnGrad),
+                fontSize: 11,
+                color: AppColors.cobalt.withOpacity(0.60),
+              ),
             ),
           ],
         ),
-      );
+        const SizedBox(height: 2),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.nunito(fontSize: 9, color: AppColors.mutedOnGrad),
+        ),
+      ],
+    ),
+  );
 
   // Settings — frosted-glass icon button matching _iconButton() in challenge view.
   Widget _settingsButton() => GestureDetector(
-    onTap: () {Get.toNamed(Routes.profile);},
+    onTap: () {
+      Get.toNamed(Routes.profile);
+    },
     child: Container(
       width: 44,
       height: 44,
@@ -254,8 +265,7 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
         borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         border: Border.all(color: Colors.white.withOpacity(0.50)),
       ),
-      child: Icon(Icons.settings_rounded,
-          color: AppColors.cobalt, size: 20),
+      child: Icon(Icons.settings_rounded, color: AppColors.cobalt, size: 20),
     ),
   );
 
@@ -263,7 +273,7 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
   // White card surface matching the equation card in challenge view.
   Widget _buildGreetingBubble() {
     return Obx(() {
-      final hasStreak   = _ctrl.hasStreak;
+      final hasStreak = _ctrl.hasStreak;
       final accentColor = hasStreak ? AppColors.sunflower : AppColors.cobalt;
 
       return AnimatedContainer(
@@ -290,28 +300,33 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
     const highlight = 'Brainy';
     final idx = text.indexOf(highlight);
     if (idx == -1) {
-      return Text(text,
-          textAlign: TextAlign.center,
-          style: GoogleFonts.nunito(
-              fontSize: 15,
-              color: AppColors.cobalt.withOpacity(0.70),
-              height: 1.4));
+      return Text(
+        text,
+        textAlign: TextAlign.center,
+        style: GoogleFonts.nunito(
+          fontSize: 15,
+          color: AppColors.cobalt.withOpacity(0.70),
+          height: 1.4,
+        ),
+      );
     }
     return RichText(
       textAlign: TextAlign.center,
       text: TextSpan(
         style: GoogleFonts.nunito(
-            fontSize: 15,
-            color: AppColors.cobalt.withOpacity(0.70),
-            height: 1.4),
+          fontSize: 15,
+          color: AppColors.cobalt.withOpacity(0.70),
+          height: 1.4,
+        ),
         children: [
           TextSpan(text: text.substring(0, idx)),
           TextSpan(
             text: highlight,
             style: GoogleFonts.nunito(
-                fontSize: 15,
-                color: accentColor,
-                fontWeight: FontWeight.w800),
+              fontSize: 15,
+              color: accentColor,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           TextSpan(text: text.substring(idx + highlight.length)),
         ],
@@ -381,14 +396,19 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
         decoration: BoxDecoration(
           color: AppColors.cobaltLight,
           borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-          border: Border.all(color: AppColors.cobaltDark, width: 1.5), // ✅ Using cobaltDark
+          border: Border.all(
+            color: AppColors.cobaltDark,
+            width: 1.5,
+          ), // ✅ Using cobaltDark
         ),
         child: Material(
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(AppTheme.radiusCard),
           child: InkWell(
             borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-            onTap: () => _showLevelDetailsBottomSheet(context), // 🚀 Triggers the detail layout popup sheet
+            onTap: () => _showLevelDetailsBottomSheet(
+              context,
+            ), // 🚀 Triggers the detail layout popup sheet
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -396,7 +416,8 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
                   _buildLevelBadge(), // ⭐ Extracted component method
                   const SizedBox(width: 16),
                   Expanded(
-                    child: _buildProgressBarTrack(), // ⭐ Extracted component method
+                    child:
+                        _buildProgressBarTrack(), // ⭐ Extracted component method
                   ),
                 ],
               ),
@@ -422,14 +443,16 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text('💎', style: TextStyle(fontSize: 12)),
-            Obx(() => Text(
-              'Lvl ${_ctrl.currentLevel}',
-              style: GoogleFonts.nunito(
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
+            Obx(
+              () => Text(
+                'Lvl ${_ctrl.currentLevel}',
+                style: GoogleFonts.nunito(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                ),
               ),
-            )),
+            ),
           ],
         ),
       ),
@@ -453,14 +476,16 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
                 color: Colors.white.withOpacity(0.9),
               ),
             ),
-            Obx(() => Text(
-              '${_ctrl.complexityPercent.value}%',
-              style: GoogleFonts.nunito(
-                fontSize: 14,
-                fontWeight: FontWeight.w900,
-                color: AppColors.sunflower,
+            Obx(
+              () => Text(
+                '${_ctrl.complexityPercent.value}%',
+                style: GoogleFonts.nunito(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.sunflower,
+                ),
               ),
-            )),
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -492,7 +517,7 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
 
   void _showLevelDetailsBottomSheet(BuildContext context) {
     final currentLvl = _ctrl.currentLevel.value;
-    final maxLevels  = kLevels.length;
+    final maxLevels = kLevels.length;
     final complexity = _ctrl.complexityPercent.value;
     final personalBest = _ctrl.topScore.value;
 
@@ -555,13 +580,19 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
                 decoration: BoxDecoration(
                   color: AppColors.cobaltLight.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(AppTheme.radiusKey),
-                  border: Border.all(color: AppColors.cobaltDark.withOpacity(0.5)),
+                  border: Border.all(
+                    color: AppColors.cobaltDark.withOpacity(0.5),
+                  ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _buildPopupMiniStat('🧩 Complexity', '$complexity%'),
-                    Container(width: 1, height: 40, color: AppColors.darkDivider),
+                    Container(
+                      width: 1,
+                      height: 40,
+                      color: AppColors.darkDivider,
+                    ),
                     _buildPopupMiniStat('🏆 High Score', '$personalBest pts'),
                   ],
                 ),
@@ -576,7 +607,9 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
                     backgroundColor: AppColors.cobalt,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.radiusButton,
+                      ),
                     ),
                   ),
                   onPressed: () => Get.back(),
@@ -604,12 +637,20 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
       children: [
         Text(
           label,
-          style: GoogleFonts.nunito(fontSize: 13, color: AppColors.mintDim, fontWeight: FontWeight.w600),
+          style: GoogleFonts.nunito(
+            fontSize: 13,
+            color: AppColors.mintDim,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           value,
-          style: GoogleFonts.nunito(fontSize: 18, color: AppColors.cobalt, fontWeight: FontWeight.w900),
+          style: GoogleFonts.nunito(
+            fontSize: 18,
+            color: AppColors.cobalt,
+            fontWeight: FontWeight.w900,
+          ),
         ),
       ],
     );
@@ -625,11 +666,14 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
           borderRadius: BorderRadius.circular(AppTheme.radiusBadge),
           border: Border.all(color: AppColors.cobalt.withOpacity(0.30)),
         ),
-        child: Text('No streak yet',
-            style: GoogleFonts.nunito(
-                fontSize: 12,
-                color: AppColors.cobalt,
-                fontWeight: FontWeight.w700)),
+        child: Text(
+          'No streak yet',
+          style: GoogleFonts.nunito(
+            fontSize: 12,
+            color: AppColors.cobalt,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       );
     }
     return Container(
@@ -644,25 +688,28 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
         children: [
           const Text('🔥', style: TextStyle(fontSize: 12)),
           const SizedBox(width: 4),
-          Text('$streak day streak',
-              style: GoogleFonts.nunito(
-                  fontSize: 12,
-                  color: AppColors.sunflower,
-                  fontWeight: FontWeight.w700)),
+          Text(
+            '$streak day streak',
+            style: GoogleFonts.nunito(
+              fontSize: 12,
+              color: AppColors.sunflower,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildWeekRow(int streak) {
-    const days     = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-    const labels   = ['Mon', 'Tue', 'Today', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    const labels = ['Mon', 'Tue', 'Today', 'Thu', 'Fri', 'Sat', 'Sun'];
     const todayIdx = 2;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: List.generate(7, (i) {
-        final isToday     = i == todayIdx;
+        final isToday = i == todayIdx;
         final isCompleted = i < todayIdx && i < streak;
 
         return Column(
@@ -704,12 +751,15 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
               ),
             ),
             const SizedBox(height: 4),
-            Text(labels[i],
-                style: GoogleFonts.nunito(
-                    fontSize: 9,
-                    color: isToday
-                        ? AppColors.cobalt
-                        : AppColors.cobalt.withOpacity(0.35))),
+            Text(
+              labels[i],
+              style: GoogleFonts.nunito(
+                fontSize: 9,
+                color: isToday
+                    ? AppColors.cobalt
+                    : AppColors.cobalt.withOpacity(0.35),
+              ),
+            ),
           ],
         );
       }),
@@ -724,8 +774,9 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: GoogleFonts.nunito(
-              fontSize: 10,
-              color: AppColors.cobalt.withOpacity(0.45)),
+            fontSize: 10,
+            color: AppColors.cobalt.withOpacity(0.45),
+          ),
         ),
         const SizedBox(height: 6),
         // Bumped 18 → 22px, stays w900 (Nunito max weight)
@@ -734,18 +785,20 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: GoogleFonts.nunito(
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              color: AppColors.cobalt,
-              letterSpacing: -0.5),
+            fontSize: 22,
+            fontWeight: FontWeight.w900,
+            color: AppColors.cobalt,
+            letterSpacing: -0.5,
+          ),
         ),
         Text(
           sub,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: GoogleFonts.nunito(
-              fontSize: 10,
-              color: AppColors.cobalt.withOpacity(0.40)),
+            fontSize: 10,
+            color: AppColors.cobalt.withOpacity(0.40),
+          ),
         ),
       ],
     ),
@@ -759,29 +812,31 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
           // Matches sunflower press-pulse from numpad keys
           color: AppColors.sunflower.withOpacity(0.12),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-              color: AppColors.sunflower.withOpacity(0.40)),
+          border: Border.all(color: AppColors.sunflower.withOpacity(0.40)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.star_rounded,
-                color: AppColors.sunflower, size: 20),
+            Icon(Icons.star_rounded, color: AppColors.sunflower, size: 20),
             const SizedBox(height: 2),
             Text(
               '$topScore',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.nunito(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.sunflower,
-                  letterSpacing: -0.5),
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: AppColors.sunflower,
+                letterSpacing: -0.5,
+              ),
             ),
-            Text('top score',
-                style: GoogleFonts.nunito(
-                    fontSize: 9,
-                    color: AppColors.sunflower.withOpacity(0.70))),
+            Text(
+              'top score',
+              style: GoogleFonts.nunito(
+                fontSize: 9,
+                color: AppColors.sunflower.withOpacity(0.70),
+              ),
+            ),
           ],
         ),
       ),
@@ -807,28 +862,34 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
           gradient: played
               ? null
               : const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFFB74D), Color(0xFFFF9800)],
-          ),
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFFFB74D), Color(0xFFFF9800)],
+                ),
           color: played ? Colors.white.withOpacity(0.35) : null,
           borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-          border: played ? Border.all(color: Colors.white.withOpacity(0.50)) : null,
+          border: played
+              ? Border.all(color: Colors.white.withOpacity(0.50))
+              : null,
           boxShadow: played
               ? null
               : [
-            BoxShadow(
-              color: const Color(0xFFFF9800).withOpacity(0.40),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
+                  BoxShadow(
+                    color: const Color(0xFFFF9800).withOpacity(0.40),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
         ),
         child: Row(
           children: [
             // Leading state indicator
             if (played)
-              const Icon(Icons.check_circle_rounded, color: AppColors.cobalt, size: 32)
+              const Icon(
+                Icons.check_circle_rounded,
+                color: AppColors.cobalt,
+                size: 32,
+              )
             else
               const Text('📆', style: TextStyle(fontSize: 28)),
             const SizedBox(width: 14),
@@ -860,11 +921,15 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      played ? 'Come back tomorrow! 🎉' : 'Earn +100 Bonus XP Points!',
+                      played
+                          ? 'Come back tomorrow! 🎉'
+                          : 'Earn +100 Bonus XP Points!',
                       style: GoogleFonts.nunito(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: played ? AppColors.cobalt.withOpacity(0.55) : Colors.white.withOpacity(0.92),
+                        color: played
+                            ? AppColors.cobalt.withOpacity(0.55)
+                            : Colors.white.withOpacity(0.92),
                       ),
                     ),
                   ],
@@ -883,20 +948,28 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
               onPressed: () {
                 void goToGame() {
                   Get.back();
-                  Get.toNamed(Routes.game, arguments: _dailyCtrl.challengeConfig)
-                      ?.then((_) => _ctrl.refreshStats());
+                  Get.toNamed(
+                    Routes.game,
+                    arguments: _dailyCtrl.challengeConfig,
+                  )?.then((_) => _ctrl.refreshStats());
                 }
 
                 Get.to(
-                      () => Obx(() => DailyChallengeHistoryView(
-                    hasPlayedToday: _dailyCtrl.hasPlayedToday.value,
-                    isInProgress: _dailyCtrl.isInProgress.value, // ⭐ drives "Continue Challenge"
-                    history: _dailyCtrl.history, // ⭐ drives the 3-state calendar grid
-                    onPlayPressed: () {
-                      if (!_dailyCtrl.hasPlayedToday.value) goToGame();
-                    },
-                    onContinuePressed: goToGame, // ⭐ resumes today's in-progress attempt
-                  )),
+                  () => Obx(
+                    () => DailyChallengeHistoryView(
+                      hasPlayedToday: _dailyCtrl.hasPlayedToday.value,
+                      isInProgress: _dailyCtrl
+                          .isInProgress
+                          .value, // ⭐ drives "Continue Challenge"
+                      history: _dailyCtrl
+                          .history, // ⭐ drives the 3-state calendar grid
+                      onPlayPressed: () {
+                        if (!_dailyCtrl.hasPlayedToday.value) goToGame();
+                      },
+                      onContinuePressed:
+                          goToGame, // ⭐ resumes today's in-progress attempt
+                    ),
+                  ),
                   transition: Transition.rightToLeft,
                 );
               },
@@ -955,8 +1028,10 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
               onTap: () {
                 // Navigate to the game screen, then refresh metrics when they return!
                 Get.toNamed(Routes.game)?.then((_) {
-                  _ctrl.refreshStats();        // Updates stats like weekly streak & scores
-                  _ctrl.refreshLevelMetrics();   // Updates Level and Complexity percent visually
+                  _ctrl
+                      .refreshStats(); // Updates stats like weekly streak & scores
+                  _ctrl
+                      .refreshLevelMetrics(); // Updates Level and Complexity percent visually
                 });
               },
               child: Row(
@@ -988,10 +1063,14 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
     // (offer an ad-unlocked retry). wasChallengePerfectWin already answers
     // that directly; no need to invert it or treat it as a hearts proxy.
     final bool finishedButNotPerfect =
-        _dailyCtrl.hasPlayedToday.value && !_dailyCtrl.wasChallengePerfectWin.value;
+        _dailyCtrl.hasPlayedToday.value &&
+        !_dailyCtrl.wasChallengePerfectWin.value;
 
     if (finishedButNotPerfect) {
-      _showSecondChanceDialog(context, reason: SecondChanceReason.alreadyPlayedToday);
+      _showSecondChanceDialog(
+        context,
+        reason: SecondChanceReason.alreadyPlayedToday,
+      );
     } else {
       // Clean win feedback
       Get.snackbar(
@@ -1006,13 +1085,15 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
   }
 
   void _showSecondChanceDialog(
-      BuildContext context, {
-        required SecondChanceReason reason,
-      }) {
+    BuildContext context, {
+    required SecondChanceReason reason,
+  }) {
     final bool alreadyPlayed = reason == SecondChanceReason.alreadyPlayedToday;
 
     final String emoji = alreadyPlayed ? '🔒' : '💔';
-    final String title = alreadyPlayed ? 'Challenge Already Completed!' : 'Out of Hearts!';
+    final String title = alreadyPlayed
+        ? 'Challenge Already Completed!'
+        : 'Out of Hearts!';
     final String body = alreadyPlayed
         ? "You already finished today's challenge! Watch a quick video to unlock one more attempt."
         : "Don't break your training streak! Watch a quick video to get 1 extra heart and try today's challenge again.";
@@ -1020,11 +1101,16 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+        ),
         title: Text(
           '$emoji $title',
           textAlign: TextAlign.center,
-          style: GoogleFonts.nunito(fontWeight: FontWeight.w900, color: AppColors.cobalt),
+          style: GoogleFonts.nunito(
+            fontWeight: FontWeight.w900,
+            color: AppColors.cobalt,
+          ),
         ),
         content: Text(
           body,
@@ -1034,18 +1120,31 @@ class _BrainyDashboardViewState extends State<BrainyDashboardView>
         actionsAlignment: MainAxisAlignment.center,
         actions: [
           TextButton(
-            onPressed: () { Get.back(); },
-            child: Text('Maybe later', style: GoogleFonts.nunito(color: Colors.grey)),
+            onPressed: () {
+              Get.back();
+            },
+            child: Text(
+              'Maybe later',
+              style: GoogleFonts.nunito(color: Colors.grey),
+            ),
           ),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.sunflower,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusButton)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+              ),
             ),
-            icon: const Icon(Icons.play_circle_filled_rounded, color: AppColors.cobalt),
+            icon: const Icon(
+              Icons.play_circle_filled_rounded,
+              color: AppColors.cobalt,
+            ),
             label: Text(
               'Watch Ad',
-              style: GoogleFonts.nunito(fontWeight: FontWeight.w900, color: AppColors.cobalt),
+              style: GoogleFonts.nunito(
+                fontWeight: FontWeight.w900,
+                color: AppColors.cobalt,
+              ),
             ),
             onPressed: () {
               Get.back();

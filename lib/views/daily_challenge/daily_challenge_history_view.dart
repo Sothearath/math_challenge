@@ -54,8 +54,9 @@ class DailyChallengeHistoryView extends StatelessWidget {
     final int startingWeekday = firstOfMonth.weekday % 7;
     final int currentDayIndex = now.day;
 
-    final int completedCount =
-        history.values.where((r) => r.status == DailyChallengeStatus.completed).length;
+    final int completedCount = history.values
+        .where((r) => r.status == DailyChallengeStatus.completed)
+        .length;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -81,7 +82,11 @@ class DailyChallengeHistoryView extends StatelessWidget {
                     top: 10,
                     left: 8,
                     child: IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 22),
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
                       onPressed: () => Get.back(),
                     ),
                   ),
@@ -91,7 +96,11 @@ class DailyChallengeHistoryView extends StatelessWidget {
                       children: [
                         Text(
                           'Daily Challenges',
-                          style: GoogleFonts.nunito(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white),
+                          style: GoogleFonts.nunito(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
                         ),
                         const SizedBox(height: 16),
                         Container(
@@ -99,9 +108,15 @@ class DailyChallengeHistoryView extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.15),
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white.withOpacity(0.25), width: 1.5),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.25),
+                              width: 1.5,
+                            ),
                           ),
-                          child: const Text('🏆', style: TextStyle(fontSize: 54)),
+                          child: const Text(
+                            '🏆',
+                            style: TextStyle(fontSize: 54),
+                          ),
                         ),
                       ],
                     ),
@@ -123,14 +138,24 @@ class DailyChallengeHistoryView extends StatelessWidget {
                     children: [
                       Text(
                         _monthYearLabel(now),
-                        style: GoogleFonts.nunito(fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.cobalt),
+                        style: GoogleFonts.nunito(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.cobalt,
+                        ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFFF8E1),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFFFD54F), width: 1),
+                          border: Border.all(
+                            color: const Color(0xFFFFD54F),
+                            width: 1,
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -139,7 +164,11 @@ class DailyChallengeHistoryView extends StatelessWidget {
                             const SizedBox(width: 6),
                             Text(
                               '$completedCount/$totalDays',
-                              style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w900, color: const Color(0xFFFF8F00)),
+                              style: GoogleFonts.nunito(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFFFF8F00),
+                              ),
                             ),
                           ],
                         ),
@@ -156,7 +185,11 @@ class DailyChallengeHistoryView extends StatelessWidget {
                         child: Text(
                           day,
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey.withOpacity(0.70)),
+                          style: GoogleFonts.nunito(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.withOpacity(0.70),
+                          ),
                         ),
                       );
                     }).toList(),
@@ -167,31 +200,43 @@ class DailyChallengeHistoryView extends StatelessWidget {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: totalDays + startingWeekday,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 7,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 7,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                        ),
                     itemBuilder: (context, index) {
-                      if (index < startingWeekday) return const SizedBox.shrink();
+                      if (index < startingWeekday)
+                        return const SizedBox.shrink();
 
                       final int displayDay = index - startingWeekday + 1;
                       final bool isToday = displayDay == currentDayIndex;
                       final bool isFuture = displayDay > currentDayIndex;
                       final String dateStr = _dateStringFor(now, displayDay);
                       final DailyChallengeRecord record =
-                          history[dateStr] ?? DailyChallengeRecord.notStartedRecord;
+                          history[dateStr] ??
+                          DailyChallengeRecord.notStartedRecord;
 
                       return _CalendarCell(
                         displayDay: displayDay,
                         isToday: isToday,
                         isFuture: isFuture,
-                        status: isToday && isInProgress && record.status != DailyChallengeStatus.completed
+                        status:
+                            isToday &&
+                                isInProgress &&
+                                record.status != DailyChallengeStatus.completed
                             ? DailyChallengeStatus.inProgress
                             : record.status,
                         onTap: isFuture
                             ? null
-                            : () => _handleDayTap(context, dateStr, displayDay, isToday, record),
+                            : () => _handleDayTap(
+                                context,
+                                dateStr,
+                                displayDay,
+                                isToday,
+                                record,
+                              ),
                       );
                     },
                   ),
@@ -202,22 +247,37 @@ class DailyChallengeHistoryView extends StatelessWidget {
 
           // Dock CTA
           Padding(
-            padding: const EdgeInsets.only(left: 24, right: 24, bottom: 32, top: 12),
+            padding: const EdgeInsets.only(
+              left: 24,
+              right: 24,
+              bottom: 48,
+              top: 12,
+            ),
             child: SizedBox(
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: hasPlayedToday ? Colors.grey.shade400 : AppColors.cobalt,
+                  backgroundColor: hasPlayedToday
+                      ? Colors.grey.shade400
+                      : AppColors.cobalt,
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusButton)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                  ),
                 ),
                 onPressed: hasPlayedToday
                     ? null
-                    : (isInProgress ? (onContinuePressed ?? onPlayPressed) : onPlayPressed),
+                    : (isInProgress
+                          ? (onContinuePressed ?? onPlayPressed)
+                          : onPlayPressed),
                 child: Text(
                   _dockButtonLabel(),
-                  style: GoogleFonts.nunito(fontSize: 17, fontWeight: FontWeight.w900, color: Colors.white),
+                  style: GoogleFonts.nunito(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
@@ -235,8 +295,18 @@ class DailyChallengeHistoryView extends StatelessWidget {
 
   String _monthYearLabel(DateTime now) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     return '${months[now.month - 1]} ${now.year}';
   }
@@ -247,16 +317,19 @@ class DailyChallengeHistoryView extends StatelessWidget {
   }
 
   void _handleDayTap(
-      BuildContext context,
-      String dateStr,
-      int displayDay,
-      bool isToday,
-      DailyChallengeRecord record,
-      ) {
+    BuildContext context,
+    String dateStr,
+    int displayDay,
+    bool isToday,
+    DailyChallengeRecord record,
+  ) {
     // Today, unplayed/in-progress -> no sheet, the dock CTA already handles it.
     if (isToday && record.status != DailyChallengeStatus.completed) return;
 
-    final effectiveStatus = isToday && isInProgress && record.status != DailyChallengeStatus.completed
+    final effectiveStatus =
+        isToday &&
+            isInProgress &&
+            record.status != DailyChallengeStatus.completed
         ? DailyChallengeStatus.inProgress
         : record.status;
 
@@ -267,7 +340,8 @@ class DailyChallengeHistoryView extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (sheetContext) => _DayDetailSheet(
-        dayLabel: '${_monthYearLabel(DateTime.now()).split(' ').first} $displayDay',
+        dayLabel:
+            '${_monthYearLabel(DateTime.now()).split(' ').first} $displayDay',
         status: effectiveStatus,
         record: record,
         showPlayTodayCta: !hasPlayedToday,
@@ -312,17 +386,29 @@ class _CalendarCell extends StatelessWidget {
     if (isCompleted) {
       fill = AppColors.mint.withOpacity(0.12);
       border = AppColors.mint;
-      content = const Icon(Icons.check_rounded, color: AppColors.mint, size: 20);
+      content = const Icon(
+        Icons.check_rounded,
+        color: AppColors.mint,
+        size: 20,
+      );
     } else if (showHalfwayStyle) {
       fill = _HalfwayColors.bg;
       border = _HalfwayColors.border;
-      content = const Icon(Icons.pause_circle_outline_rounded, color: _HalfwayColors.icon, size: 18);
+      content = const Icon(
+        Icons.pause_circle_outline_rounded,
+        color: _HalfwayColors.icon,
+        size: 18,
+      );
     } else if (isToday) {
       fill = AppColors.cobalt;
       border = AppColors.cobalt;
       content = Text(
         '$displayDay',
-        style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+        style: GoogleFonts.nunito(
+          fontSize: 15,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
       );
     } else {
       content = Text(
@@ -385,7 +471,8 @@ class _DayDetailSheet extends StatelessWidget {
         icon = Icons.pause_circle_outline_rounded;
         iconColor = _HalfwayColors.icon;
         title = 'Started, Not Finished';
-        body = "You started this challenge but didn't finish it. That's okay — "
+        body =
+            "You started this challenge but didn't finish it. That's okay — "
             "today's challenge is ready and waiting!";
         break;
       case DailyChallengeStatus.missed:
@@ -408,13 +495,21 @@ class _DayDetailSheet extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: GoogleFonts.nunito(fontSize: 19, fontWeight: FontWeight.w900, color: AppColors.cobalt),
+              style: GoogleFonts.nunito(
+                fontSize: 19,
+                fontWeight: FontWeight.w900,
+                color: AppColors.cobalt,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               body,
               textAlign: TextAlign.center,
-              style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black.withOpacity(0.6)),
+              style: GoogleFonts.nunito(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.black.withOpacity(0.6),
+              ),
             ),
             const SizedBox(height: 24),
             SizedBox(
@@ -422,40 +517,70 @@ class _DayDetailSheet extends StatelessWidget {
               height: 52,
               child: status == DailyChallengeStatus.completed
                   ? OutlinedButton(
-                onPressed: () => Get.back(),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.cobalt, width: 1.5),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusButton)),
-                ),
-                child: Text(
-                  'Close',
-                  style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.cobalt),
-                ),
-              )
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(
+                          color: AppColors.cobalt,
+                          width: 1.5,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusButton,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        'Close',
+                        style: GoogleFonts.nunito(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.cobalt,
+                        ),
+                      ),
+                    )
                   : showPlayTodayCta
                   ? ElevatedButton(
-                onPressed: onPlayToday,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.cobalt,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusButton)),
-                ),
-                child: Text(
-                  "Play Today's Challenge",
-                  style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white),
-                ),
-              )
+                      onPressed: onPlayToday,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.cobalt,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusButton,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        "Play Today's Challenge",
+                        style: GoogleFonts.nunito(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    )
                   : OutlinedButton(
-                onPressed: () => Get.back(),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.cobalt, width: 1.5),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusButton)),
-                ),
-                child: Text(
-                  'Close',
-                  style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.cobalt),
-                ),
-              ),
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(
+                          color: AppColors.cobalt,
+                          width: 1.5,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusButton,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        'Close',
+                        style: GoogleFonts.nunito(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.cobalt,
+                        ),
+                      ),
+                    ),
             ),
           ],
         ),
